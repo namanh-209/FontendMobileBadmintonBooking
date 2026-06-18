@@ -739,6 +739,10 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
     final tenHienThi = taiKhoanXuLy.daDangNhap ? '$hoTen 👋' : 'Khách 👋';
 
     return Scaffold(
+      extendBody: true,
+      bottomNavigationBar: const ThanhDuoi(
+        viTriDangChon: 0,
+      ),
       body: Stack(
         children: [
           Positioned.fill(
@@ -748,6 +752,7 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
             ),
           ),
           SafeArea(
+            bottom: false,
             child: Column(
               children: [
                 Expanded(
@@ -868,9 +873,6 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
                       ],
                     ),
                   ),
-                ),
-                const ThanhDuoi(
-                  viTriDangChon: 0,
                 ),
               ],
             ),

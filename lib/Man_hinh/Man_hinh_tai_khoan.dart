@@ -828,6 +828,10 @@ class ManHinhTaiKhoan extends StatelessWidget {
     final taiKhoanXuLy = context.watch<XuLiTaiKhoan>();
 
     return Scaffold(
+      extendBody: true,
+      bottomNavigationBar: const ThanhDuoi(
+        viTriDangChon: 4,
+      ),
       body: Stack(
         children: [
           Positioned.fill(
@@ -842,15 +846,13 @@ class ManHinhTaiKhoan extends StatelessWidget {
             ),
           ),
           SafeArea(
+            bottom: false,
             child: Column(
               children: [
                 Expanded(
                   child: taiKhoanXuLy.daDangNhap
                       ? manHinhDaDangNhap(context)
                       : manHinhChuaDangNhap(context),
-                ),
-                const ThanhDuoi(
-                  viTriDangChon: 4,
                 ),
               ],
             ),

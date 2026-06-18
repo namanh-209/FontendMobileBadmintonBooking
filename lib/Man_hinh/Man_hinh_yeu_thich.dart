@@ -406,6 +406,10 @@ class _ManHinhYeuThichState extends State<ManHinhYeuThich> {
     }).toList();
 
     return Scaffold(
+      extendBody: true,
+      bottomNavigationBar: const ThanhDuoi(
+        viTriDangChon: 2,
+      ),
       body: Stack(
         children: [
           Positioned.fill(
@@ -415,6 +419,7 @@ class _ManHinhYeuThichState extends State<ManHinhYeuThich> {
             ),
           ),
           SafeArea(
+            bottom: false,
             child: Column(
               children: [
                 const SizedBox(height: 12),
@@ -450,9 +455,6 @@ class _ManHinhYeuThichState extends State<ManHinhYeuThich> {
                                 );
                               },
                             ),
-                ),
-                const ThanhDuoi(
-                  viTriDangChon: 2,
                 ),
               ],
             ),

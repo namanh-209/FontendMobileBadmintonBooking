@@ -1,8 +1,4 @@
-import 'dart:convert';
 import 'dart:io';
-
-import 'package:http/http.dart' as http;
-import 'package:http_parser/http_parser.dart';
 
 import '../Chung/Duong_dan_api.dart';
 import '../Mau_du_lieu/Nguoi_dung.dart';
@@ -27,113 +23,6 @@ class TaiKhoanApi {
     }
 
     return map;
-  }
-
-  Uri _uri(String path) {
-    if (path.startsWith('http://') || path.startsWith('https://')) {
-      return Uri.parse(path);
-    }
-
-    return Uri.parse('${DuongDanApi.goc}$path');
-  }
-
-  dynamic _decode(String body) {
-    final value = body.trim();
-    if (value.isEmpty) return null;
-
-    try {
-      return jsonDecode(value);
-    } catch (_) {
-      return value;
-    }
-  }
-
-  dynamic _xuLyResponse(http.Response res) {
-    final data = _decode(res.body);
-
-    if (res.statusCode >= 200 && res.statusCode < 300) {
-      return data;
-    }
-
-    String msg = 'Lỗi kết nối API (${res.statusCode})';
-
-    if (data is Map) {
-      msg = (data['message'] ?? data['error'] ?? data['msg'] ?? msg).toString();
-    } else if (data is String && data.isNotEmpty) {
-      if (data.trimLeft().startsWith('<')) {
-        msg = 'API trả về HTML (${res.statusCode}), kiểm tra lại endpoint hoặc server';
-      } else {
-        msg = data;
-      }
-    }
-
-    throw LoiApi(msg, statusCode: res.statusCode);
-  }
-
-  MediaType _layKieuAnh(String duongDan) {
-    final duoiFile = duongDan.split('.').last.toLowerCase();
-
-    if (duoiFile == 'png') {
-      return MediaType('image', 'png');
-    }
-
-    if (duoiFile == 'webp') {
-      return MediaType('image', 'webp');
-    }
-
-    if (duoiFile == 'jpg' || duoiFile == 'jpeg') {
-      return MediaType('image', 'jpeg');
-    }
-
-    // ImagePicker trên Android đôi khi trả path hơi lạ,
-    // ép mặc định thành jpeg để backend multer hiểu đây là ảnh.
-    return MediaType('image', 'jpeg');
-  }
-
-  String _layTenFileAnh(String duongDan) {
-    final tenGoc = duongDan.split('/').last.split('\\').last;
-    final tenThuong = tenGoc.toLowerCase();
-
-    if (tenThuong.endsWith('.jpg') ||
-        tenThuong.endsWith('.jpeg') ||
-        tenThuong.endsWith('.png') ||
-        tenThuong.endsWith('.webp')) {
-      return tenGoc;
-    }
-
-    return 'avatar_${DateTime.now().millisecondsSinceEpoch}.jpg';
-  }
-
-  Future<dynamic> _putMultipartCapNhatHoSo({
-    required Map<String, String> fields,
-    required String avatarPath,
-  }) async {
-    final request = http.MultipartRequest(
-      'PUT',
-      _uri(DuongDanApi.capNhatHoSo),
-    );
-
-    request.headers['Accept'] = 'application/json';
-
-    if (GoiApi.token != null && GoiApi.token!.isNotEmpty) {
-      request.headers['Authorization'] = 'Bearer ${GoiApi.token}';
-    }
-
-    request.fields.addAll(fields);
-
-    request.files.add(
-      await http.MultipartFile.fromPath(
-        'avatar',
-        avatarPath,
-        filename: _layTenFileAnh(avatarPath),
-        contentType: _layKieuAnh(avatarPath),
-      ),
-    );
-
-    final streamed = await request.send();
-    final res = await http.Response.fromStream(streamed);
-
-    return _xuLyResponse(res);
   }
 
   Future<Map<String, dynamic>> dangKy({
@@ -241,9 +130,7 @@ class TaiKhoanApi {
   }
 
   Future<Map<String, dynamic>> layThongTinTaiKhoan({String? token}) async {
-    if (token != null && token.isNotEmpty) {
-      GoiApi.token = token;
-    }
+    if (token != null && token.isNotEmpty) GoiApi.token = token;
 
     final data = await GoiApi.get(DuongDanApi.hoSo);
     final map = _chuanHoaKetQua(data);
@@ -251,9 +138,7 @@ class TaiKhoanApi {
 
     return {
       ...map,
-      'user': user is Map
-          ? Map<String, dynamic>.from(user)
-          : NguoiDung().toJson(),
+      'user': user is Map ? Map<String, dynamic>.from(user) : NguoiDung().toJson(),
     };
   }
 
@@ -267,13 +152,10 @@ class TaiKhoanApi {
     String? ngaySinh,
     String? avatar,
   }) async {
-    if (token != null && token.isNotEmpty) {
-      GoiApi.token = token;
-    }
+    if (token != null && token.isNotEmpty) GoiApi.token = token;
 
     final ten = hoTen ?? username ?? '';
     final avatarText = avatar?.trim() ?? '';
-
     final laFileAvatar = avatarText.isNotEmpty &&
         !avatarText.startsWith('http://') &&
         !avatarText.startsWith('https://') &&
@@ -289,9 +171,12 @@ class TaiKhoanApi {
     };
 
     final data = laFileAvatar
-        ? await _putMultipartCapNhatHoSo(
+        ? await GoiApi.putMultipart(
+            DuongDanApi.capNhatHoSo,
             fields: fields,
-            avatarPath: avatarText,
+            files: {
+              'avatar': avatarText,
+            },
           )
         : await GoiApi.put(
             DuongDanApi.capNhatHoSo,
@@ -312,7 +197,6 @@ class TaiKhoanApi {
         'user': {
           ...fields,
           'email': email,
-          if (avatarText.isNotEmpty) 'avatar': avatarText,
         },
       };
     }

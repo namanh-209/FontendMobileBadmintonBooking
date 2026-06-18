@@ -7,6 +7,7 @@ import '../Mau_du_lieu/Lich_co_so.dart';
 import '../Xu_li/Xu_li_tai_khoan.dart';
 import '../Xu_li_api/Co_so_api.dart';
 import '../Xu_li_api/Dat_san_api.dart';
+import 'Man_hinh_dang_nhap.dart';
 
 class ManHinhXemLichSan extends StatefulWidget {
   final CoSo coSo;
@@ -20,6 +21,28 @@ class ManHinhXemLichSan extends StatefulWidget {
   State<ManHinhXemLichSan> createState() => _ManHinhXemLichSanState();
 }
 
+class LuaChonDatSan {
+  final int sanId;
+  final String tenSan;
+  final LichKhungGio lich;
+
+  LuaChonDatSan({
+    required this.sanId,
+    required this.tenSan,
+    required this.lich,
+  });
+
+  String get khoa => '$sanId-${lich.khungGioMauId}';
+
+  Map<String, dynamic> toJson(String ngay) {
+    return {
+      'san_id': sanId,
+      'ngay': ngay,
+      'khung_gio_mau_id': lich.khungGioMauId,
+    };
+  }
+}
+
 class _ManHinhXemLichSanState extends State<ManHinhXemLichSan> {
   DateTime ngayDangChon = DateTime.now();
 
@@ -28,9 +51,7 @@ class _ManHinhXemLichSanState extends State<ManHinhXemLichSan> {
   String? thongBaoLoi;
 
   List<LichSanCon> danhSachLich = [];
-
-  int? sanIdDangChon;
-  LichKhungGio? khungGioDangChon;
+  final List<LuaChonDatSan> danhSachDangChon = [];
 
   @override
   void initState() {
@@ -60,12 +81,27 @@ class _ManHinhXemLichSanState extends State<ManHinhXemLichSan> {
         )}đ';
   }
 
+  double tongTienDangChon() {
+    double tong = 0;
+
+    for (final item in danhSachDangChon) {
+      tong += item.lich.gia;
+    }
+
+    return tong;
+  }
+
+  bool dangChonSlot(int sanId, int khungGioMauId) {
+    return danhSachDangChon.any(
+      (item) => item.sanId == sanId && item.lich.khungGioMauId == khungGioMauId,
+    );
+  }
+
   Future<void> layLichCoSo() async {
     setState(() {
       dangTai = true;
       thongBaoLoi = null;
-      sanIdDangChon = null;
-      khungGioDangChon = null;
+      danhSachDangChon.clear();
     });
 
     try {
@@ -90,17 +126,238 @@ class _ManHinhXemLichSanState extends State<ManHinhXemLichSan> {
     }
   }
 
-  Future<void> giuChoTamThoi() async {
-    final lich = khungGioDangChon;
+  void doiChonSlot({
+    required LichSanCon san,
+    required LichKhungGio lich,
+  }) {
+    if (!lich.conTrong) return;
 
-    if (sanIdDangChon == null || lich == null) return;
+    setState(() {
+      final index = danhSachDangChon.indexWhere(
+        (item) => item.sanId == san.sanId && item.lich.khungGioMauId == lich.khungGioMauId,
+      );
 
+      if (index >= 0) {
+        danhSachDangChon.removeAt(index);
+      } else {
+        danhSachDangChon.add(
+          LuaChonDatSan(
+            sanId: san.sanId,
+            tenSan: san.tenSan,
+            lich: lich,
+          ),
+        );
+      }
+    });
+  }
+
+  int? layDatSanId(dynamic data) {
+    if (data is! Map) return null;
+
+    final map = Map<String, dynamic>.from(data);
+    final value = map['dat_san_id'] ??
+        map['datSanId'] ??
+        map['id'] ??
+        (map['data'] is Map ? map['data']['dat_san_id'] ?? map['data']['id'] : null) ??
+        (map['dat_san'] is Map ? map['dat_san']['id'] : null);
+
+    if (value == null) return null;
+    return int.tryParse(value.toString());
+  }
+
+  Future<bool> kiemTraDangNhap() async {
     final xuLiTaiKhoan = context.read<XuLiTaiKhoan>();
     final token = await xuLiTaiKhoan.layTokenDangNhap();
 
-    if (token.isEmpty) {
-      if (!mounted) return;
+    if (token.isNotEmpty) return true;
 
+    if (!mounted) return false;
+
+    final ketQua = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const ManHinhDangNhap(
+          quayLaiTrangTruoc: true,
+        ),
+      ),
+    );
+
+    final tokenMoi = await xuLiTaiKhoan.layTokenDangNhap();
+    return tokenMoi.isNotEmpty || ketQua == true;
+  }
+
+  Future<void> hienXacNhanDatSan() async {
+    if (danhSachDangChon.isEmpty) return;
+
+    final dongY = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        return Container(
+          margin: const EdgeInsets.all(12),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(22),
+          ),
+          child: SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'Xác nhận đặt sân',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xff172554),
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  widget.coSo.tenCoSo,
+                  style: const TextStyle(
+                    color: Color(0xff2454ff),
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'Ngày đặt: ${dinhDangNgayNgan(ngayDangChon)}',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 210),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: danhSachDangChon.map((item) {
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xffeef6ff),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      item.tenSan,
+                                      style: const TextStyle(
+                                        fontSize: 12.5,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '${item.lich.gioBatDau} - ${item.lich.gioKetThuc}',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.grey.shade700,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Text(
+                                dinhDangGia(item.lich.gia),
+                                style: const TextStyle(
+                                  color: Color(0xff2454ff),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ),
+                const Divider(height: 22),
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'Tổng tiền',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      dinhDangGia(tongTienDangChon()),
+                      style: const TextStyle(
+                        color: Color(0xff2454ff),
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                SizedBox(
+                  width: double.infinity,
+                  height: 46,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xff2454ff),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: const Text(
+                      'Giữ chỗ ngay',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (dongY == true) {
+      await giuChoTamThoi();
+    }
+  }
+
+  Future<void> giuChoTamThoi() async {
+    if (danhSachDangChon.isEmpty || dangDatSan) return;
+
+    final daDangNhap = await kiemTraDangNhap();
+
+    if (!daDangNhap) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Vui lòng đăng nhập để đặt sân'),
@@ -114,26 +371,37 @@ class _ManHinhXemLichSanState extends State<ManHinhXemLichSan> {
     });
 
     try {
+      final ngay = dinhDangNgayApi(ngayDangChon);
+      final slots = danhSachDangChon.map((item) => item.toJson(ngay)).toList();
+
       final ketQua = await DatSanApi().giuChoTamThoi(
         coSoId: widget.coSo.id,
-        ngay: dinhDangNgayApi(ngayDangChon),
-        slots: [
-          {
-            'san_id': sanIdDangChon,
-            'khung_gio_mau_id': lich.khungGioMauId,
-          },
-        ],
+        ngay: ngay,
+        slots: slots,
       );
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            ketQua['message']?.toString() ??
-                'Đã giữ chỗ ${tenSanDangChon()} ${lich.gioBatDau} - ${lich.gioKetThuc}',
-          ),
-        ),
+      final datSanId = layDatSanId(ketQua);
+
+      await showDialog<void>(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: const Text('Giữ chỗ thành công'),
+            content: Text(
+              datSanId == null
+                  ? 'Lịch đã được giữ chỗ. Bạn hãy vào lịch đã đặt để thanh toán/cập nhật tiếp.'
+                  : 'Mã đặt sân: #$datSanId\nBạn hãy vào lịch đã đặt để thanh toán/cập nhật tiếp.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Đóng'),
+              ),
+            ],
+          );
+        },
       );
 
       await layLichCoSo();
@@ -192,52 +460,63 @@ class _ManHinhXemLichSanState extends State<ManHinhXemLichSan> {
     required bool dangChon,
     required VoidCallback onTap,
   }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
-      child: Container(
-        height: 42,
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        decoration: BoxDecoration(
-          color: dangChon ? const Color(0xffeef4ff) : Colors.white,
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 3),
+        child: InkWell(
+          onTap: onTap,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: dangChon ? const Color(0xff2454ff) : Colors.black54,
-            width: dangChon ? 1.2 : 0.8,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.calendar_month_rounded,
-              size: 18,
-              color: dangChon ? const Color(0xff2454ff) : Colors.black87,
+          child: Container(
+            height: 42,
+            padding: const EdgeInsets.symmetric(horizontal: 7),
+            decoration: BoxDecoration(
+              color: dangChon ? const Color(0xffeef4ff) : Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: dangChon ? const Color(0xff2454ff) : Colors.black54,
+                width: dangChon ? 1.2 : 0.8,
+              ),
             ),
-            const SizedBox(width: 6),
-            Column(
+            child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  tieuDe,
-                  style: TextStyle(
-                    color: dangChon ? const Color(0xff2454ff) : Colors.black87,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                  ),
+                Icon(
+                  Icons.calendar_month_rounded,
+                  size: 17,
+                  color: dangChon ? const Color(0xff2454ff) : Colors.black87,
                 ),
-                Text(
-                  phuDe,
-                  style: TextStyle(
-                    color: dangChon ? const Color(0xff2454ff) : Colors.black54,
-                    fontSize: 8.5,
-                    fontWeight: FontWeight.w500,
+                const SizedBox(width: 5),
+                Flexible(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        tieuDe,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: dangChon ? const Color(0xff2454ff) : Colors.black87,
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        phuDe,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: dangChon ? const Color(0xff2454ff) : Colors.black54,
+                          fontSize: 8.5,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -247,13 +526,10 @@ class _ManHinhXemLichSanState extends State<ManHinhXemLichSan> {
     final homNay = DateTime.now();
     final ngayMai = DateTime.now().add(const Duration(days: 1));
 
-    final dangChonHomNay =
-        dinhDangNgayApi(ngayDangChon) == dinhDangNgayApi(homNay);
-    final dangChonNgayMai =
-        dinhDangNgayApi(ngayDangChon) == dinhDangNgayApi(ngayMai);
+    final dangChonHomNay = dinhDangNgayApi(ngayDangChon) == dinhDangNgayApi(homNay);
+    final dangChonNgayMai = dinhDangNgayApi(ngayDangChon) == dinhDangNgayApi(ngayMai);
 
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         nutNgay(
           tieuDe: 'Hôm nay',
@@ -290,7 +566,7 @@ class _ManHinhXemLichSanState extends State<ManHinhXemLichSan> {
   Widget chuThich() {
     return Container(
       height: 36,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.95),
         borderRadius: BorderRadius.circular(10),
@@ -357,8 +633,7 @@ class _ManHinhXemLichSanState extends State<ManHinhXemLichSan> {
     required LichSanCon san,
     required LichKhungGio lich,
   }) {
-    final dangChon = sanIdDangChon == san.sanId &&
-        khungGioDangChon?.khungGioMauId == lich.khungGioMauId;
+    final dangChon = dangChonSlot(san.sanId, lich.khungGioMauId);
 
     Color mauNen;
     Color mauVien;
@@ -371,7 +646,7 @@ class _ManHinhXemLichSanState extends State<ManHinhXemLichSan> {
     } else if (dangChon) {
       mauNen = const Color(0xff91a7ff);
       mauVien = const Color(0xff2454ff);
-      mauChu = const Color(0xff2454ff);
+      mauChu = const Color(0xff172554);
     } else {
       mauNen = Colors.white;
       mauVien = Colors.grey.shade600;
@@ -381,10 +656,10 @@ class _ManHinhXemLichSanState extends State<ManHinhXemLichSan> {
     return InkWell(
       onTap: lich.conTrong
           ? () {
-              setState(() {
-                sanIdDangChon = san.sanId;
-                khungGioDangChon = lich;
-              });
+              doiChonSlot(
+                san: san,
+                lich: lich,
+              );
             }
           : null,
       child: Container(
@@ -417,7 +692,9 @@ class _ManHinhXemLichSanState extends State<ManHinhXemLichSan> {
     if (dangTai) {
       return const Expanded(
         child: Center(
-          child: CircularProgressIndicator(),
+          child: CircularProgressIndicator(
+            color: Color(0xff2454ff),
+          ),
         ),
       );
     }
@@ -466,6 +743,7 @@ class _ManHinhXemLichSanState extends State<ManHinhXemLichSan> {
             color: const Color(0xff2454ff),
             width: 1.3,
           ),
+          borderRadius: BorderRadius.circular(8),
         ),
         child: SingleChildScrollView(
           scrollDirection: Axis.horizontal,
@@ -538,18 +816,8 @@ class _ManHinhXemLichSanState extends State<ManHinhXemLichSan> {
     );
   }
 
-  String tenSanDangChon() {
-    if (sanIdDangChon == null) return '';
-
-    final san = danhSachLich.where((e) => e.sanId == sanIdDangChon).toList();
-
-    if (san.isEmpty) return '';
-
-    return san.first.tenSan;
-  }
-
   Widget thongTinDangChon() {
-    final lich = khungGioDangChon;
+    final soLuong = danhSachDangChon.length;
 
     return Container(
       width: double.infinity,
@@ -581,9 +849,9 @@ class _ManHinhXemLichSanState extends State<ManHinhXemLichSan> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  lich == null
+                  soLuong == 0
                       ? 'Chưa chọn khung giờ'
-                      : '${tenSanDangChon()}, ${lich.gioBatDau} - ${lich.gioKetThuc}',
+                      : '$soLuong khung giờ đã chọn',
                   style: TextStyle(
                     fontSize: 11.5,
                     color: Colors.grey.shade800,
@@ -606,7 +874,7 @@ class _ManHinhXemLichSanState extends State<ManHinhXemLichSan> {
               ),
               const SizedBox(height: 8),
               Text(
-                lich == null ? '0đ' : dinhDangGia(lich.gia),
+                dinhDangGia(tongTienDangChon()),
                 style: const TextStyle(
                   fontSize: 12,
                   color: Color(0xff2454ff),
@@ -622,12 +890,10 @@ class _ManHinhXemLichSanState extends State<ManHinhXemLichSan> {
 
   Widget nutTiepTuc() {
     return SizedBox(
-      width: 160,
+      width: 170,
       height: 38,
       child: ElevatedButton(
-        onPressed: khungGioDangChon == null || dangDatSan
-            ? null
-            : giuChoTamThoi,
+        onPressed: danhSachDangChon.isEmpty || dangDatSan ? null : hienXacNhanDatSan,
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xff2454ff),
           disabledBackgroundColor: Colors.grey.shade400,
@@ -636,14 +902,23 @@ class _ManHinhXemLichSanState extends State<ManHinhXemLichSan> {
             borderRadius: BorderRadius.circular(9),
           ),
         ),
-        child: const Text(
-          'Tiếp tục đặt sân',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 11.5,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        child: dangDatSan
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
+            : const Text(
+                'Tiếp tục đặt sân',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
       ),
     );
   }
@@ -710,7 +985,7 @@ class _ManHinhXemLichSanState extends State<ManHinhXemLichSan> {
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    widget.coSo.diaChi,
+                    widget.coSo.diaChi.isEmpty ? 'Chưa có địa chỉ' : widget.coSo.diaChi,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -720,7 +995,7 @@ class _ManHinhXemLichSanState extends State<ManHinhXemLichSan> {
                   ),
                   const Spacer(),
                   Text(
-                    '${widget.coSo.soLuongSan} sân con',
+                    widget.coSo.soLuongSan > 0 ? '${widget.coSo.soLuongSan} sân con' : 'Chọn sân và khung giờ',
                     style: const TextStyle(
                       color: Color(0xff2454ff),
                       fontSize: 11,
@@ -781,7 +1056,10 @@ class _ManHinhXemLichSanState extends State<ManHinhXemLichSan> {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 36),
+                      IconButton(
+                        onPressed: layLichCoSo,
+                        icon: const Icon(Icons.refresh_rounded),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 10),

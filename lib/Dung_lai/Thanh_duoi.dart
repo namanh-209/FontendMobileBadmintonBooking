@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../Man_hinh/Man_hinh_trang_chu.dart';
+import '../Man_hinh/Man_hinh_ban_do.dart';
 import '../Man_hinh/Man_hinh_tai_khoan.dart';
 import '../Man_hinh/Man_hinh_yeu_thich.dart';
 import 'Hieu_ung_chuyen_trang.dart';
@@ -21,11 +22,7 @@ class ThanhDuoi extends StatelessWidget {
     if (viTri == 0) {
       manHinh = const ManHinhTrangChu();
     } else if (viTri == 1) {
-      manHinh = const ManHinhTam(
-        tieuDe: 'Bản đồ',
-        noiDung: 'Chức năng bản đồ đang phát triển',
-        viTriDangChon: 1,
-      );
+      manHinh = const ManHinhBanDo();
     } else if (viTri == 2) {
       manHinh = const ManHinhYeuThich();
     } else if (viTri == 3) {
@@ -164,12 +161,17 @@ class ManHinhTam extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBody: true,
+      bottomNavigationBar: ThanhDuoi(
+        viTriDangChon: viTriDangChon,
+      ),
       body: Stack(
         children: [
           Container(
             color: const Color(0xffeef6ff),
           ),
           SafeArea(
+            bottom: false,
             child: Column(
               children: [
                 Expanded(
@@ -220,9 +222,6 @@ class ManHinhTam extends StatelessWidget {
                       ),
                     ),
                   ),
-                ),
-                ThanhDuoi(
-                  viTriDangChon: viTriDangChon,
                 ),
               ],
             ),
