@@ -21,6 +21,7 @@ class ManHinhBanDo extends StatefulWidget {
 class _ManHinhBanDoState extends State<ManHinhBanDo> {
   final MapController mapController = MapController();
   final TextEditingController oTimKiemController = TextEditingController();
+  final FocusNode focusTimKiem = FocusNode();
 
   static const LatLng viTriMacDinh = LatLng(10.762622, 106.660172);
 
@@ -35,6 +36,12 @@ class _ManHinhBanDoState extends State<ManHinhBanDo> {
   void initState() {
     super.initState();
 
+    focusTimKiem.addListener(() {
+      if (mounted) {
+        setState(() {});
+      }
+    });
+
     Future.microtask(() async {
       final xuLyCoSo = context.read<XuLiCoSo>();
 
@@ -44,19 +51,15 @@ class _ManHinhBanDoState extends State<ManHinhBanDo> {
 
       if (!mounted) return;
 
-      final danhSach = danhSachSauKhiLoc(xuLyCoSo.danhSachCoSo);
+      final danhSach = danhSachCoToaDo(xuLyCoSo.danhSachCoSo);
 
       if (danhSach.isNotEmpty) {
-        setState(() {
-          coSoDangChon = danhSach.first;
-        });
-
         Future.delayed(const Duration(milliseconds: 250), () {
           if (!mounted) return;
 
           diChuyenMap(
-            LatLng(danhSach.first.viDo, danhSach.first.kinhDo),
-            zoom: 14,
+            tinhTamDanhSach(danhSach),
+            zoom: 12.2,
           );
         });
       }
@@ -66,11 +69,113 @@ class _ManHinhBanDoState extends State<ManHinhBanDo> {
   @override
   void dispose() {
     oTimKiemController.dispose();
+    focusTimKiem.dispose();
     super.dispose();
+  }
+
+  String boDauTiengViet(String text) {
+    var result = text.toLowerCase();
+
+    const bangDau = {
+      'à': 'a',
+      'á': 'a',
+      'ạ': 'a',
+      'ả': 'a',
+      'ã': 'a',
+      'â': 'a',
+      'ầ': 'a',
+      'ấ': 'a',
+      'ậ': 'a',
+      'ẩ': 'a',
+      'ẫ': 'a',
+      'ă': 'a',
+      'ằ': 'a',
+      'ắ': 'a',
+      'ặ': 'a',
+      'ẳ': 'a',
+      'ẵ': 'a',
+      'è': 'e',
+      'é': 'e',
+      'ẹ': 'e',
+      'ẻ': 'e',
+      'ẽ': 'e',
+      'ê': 'e',
+      'ề': 'e',
+      'ế': 'e',
+      'ệ': 'e',
+      'ể': 'e',
+      'ễ': 'e',
+      'ì': 'i',
+      'í': 'i',
+      'ị': 'i',
+      'ỉ': 'i',
+      'ĩ': 'i',
+      'ò': 'o',
+      'ó': 'o',
+      'ọ': 'o',
+      'ỏ': 'o',
+      'õ': 'o',
+      'ô': 'o',
+      'ồ': 'o',
+      'ố': 'o',
+      'ộ': 'o',
+      'ổ': 'o',
+      'ỗ': 'o',
+      'ơ': 'o',
+      'ờ': 'o',
+      'ớ': 'o',
+      'ợ': 'o',
+      'ở': 'o',
+      'ỡ': 'o',
+      'ù': 'u',
+      'ú': 'u',
+      'ụ': 'u',
+      'ủ': 'u',
+      'ũ': 'u',
+      'ư': 'u',
+      'ừ': 'u',
+      'ứ': 'u',
+      'ự': 'u',
+      'ử': 'u',
+      'ữ': 'u',
+      'ỳ': 'y',
+      'ý': 'y',
+      'ỵ': 'y',
+      'ỷ': 'y',
+      'ỹ': 'y',
+      'đ': 'd',
+    };
+
+    bangDau.forEach((key, value) {
+      result = result.replaceAll(key, value);
+    });
+
+    return result;
   }
 
   bool coToaDo(CoSo coSo) {
     return coSo.viDo != 0 && coSo.kinhDo != 0;
+  }
+
+  List<CoSo> danhSachCoToaDo(List<CoSo> danhSachGoc) {
+    return danhSachGoc.where((coSo) => coToaDo(coSo)).toList();
+  }
+
+  LatLng tinhTamDanhSach(List<CoSo> danhSach) {
+    if (danhSach.isEmpty) return viTriMacDinh;
+
+    double tongViDo = 0;
+    double tongKinhDo = 0;
+
+    for (final coSo in danhSach) {
+      tongViDo += coSo.viDo;
+      tongKinhDo += coSo.kinhDo;
+    }
+
+    return LatLng(
+      tongViDo / danhSach.length,
+      tongKinhDo / danhSach.length,
+    );
   }
 
   String dinhDangGia(double gia) {
@@ -110,20 +215,22 @@ class _ManHinhBanDoState extends State<ManHinhBanDo> {
   }
 
   List<CoSo> danhSachSauKhiLoc(List<CoSo> danhSachGoc) {
-    final keyword = tuKhoa.trim().toLowerCase();
+    final keyword = boDauTiengViet(tuKhoa.trim());
 
     final danhSach = danhSachGoc.where((coSo) {
       if (!coToaDo(coSo)) return false;
 
       if (keyword.isEmpty) return true;
 
-      final noiDungTim = [
-        coSo.tenCoSo,
-        coSo.ten,
-        coSo.diaChi,
-        coSo.phuongXa,
-        coSo.tinhThanh,
-      ].join(' ').toLowerCase();
+      final noiDungTim = boDauTiengViet(
+        [
+          coSo.tenCoSo,
+          coSo.ten,
+          coSo.diaChi,
+          coSo.phuongXa,
+          coSo.tinhThanh,
+        ].join(' '),
+      );
 
       return noiDungTim.contains(keyword);
     }).toList();
@@ -143,6 +250,22 @@ class _ManHinhBanDoState extends State<ManHinhBanDo> {
     return danhSach;
   }
 
+  List<CoSo> danhSachGoiY(List<CoSo> danhSachGoc) {
+    if (tuKhoa.trim().isEmpty) return [];
+
+    final danhSach = danhSachSauKhiLoc(danhSachGoc);
+
+    if (viTriCuaToi != null) {
+      danhSach.sort((a, b) => khoangCachKm(a).compareTo(khoangCachKm(b)));
+    }
+
+    if (danhSach.length > 6) {
+      return danhSach.sublist(0, 6);
+    }
+
+    return danhSach;
+  }
+
   CoSo? coSoDangHienThi(List<CoSo> danhSach) {
     final coSo = coSoDangChon;
 
@@ -150,17 +273,14 @@ class _ManHinhBanDoState extends State<ManHinhBanDo> {
       return coSo;
     }
 
-    if (danhSach.isNotEmpty) return danhSach.first;
-
     return null;
   }
 
   LatLng tamBanDoDauTien(List<CoSo> danhSachCoSo) {
-    final danhSach = danhSachSauKhiLoc(danhSachCoSo);
-    final coSo = coSoDangHienThi(danhSach);
+    final danhSach = danhSachCoToaDo(danhSachCoSo);
 
-    if (coSo != null) {
-      return LatLng(coSo.viDo, coSo.kinhDo);
+    if (danhSach.isNotEmpty) {
+      return tinhTamDanhSach(danhSach);
     }
 
     return viTriMacDinh;
@@ -180,7 +300,23 @@ class _ManHinhBanDoState extends State<ManHinhBanDo> {
 
     diChuyenMap(
       LatLng(coSo.viDo, coSo.kinhDo),
-      zoom: 15,
+      zoom: 15.5,
+    );
+  }
+
+  void chonGoiY(CoSo coSo) {
+    oTimKiemController.text = coSo.tenCoSo;
+
+    setState(() {
+      tuKhoa = coSo.tenCoSo;
+      coSoDangChon = coSo;
+    });
+
+    focusTimKiem.unfocus();
+
+    diChuyenMap(
+      LatLng(coSo.viDo, coSo.kinhDo),
+      zoom: 15.5,
     );
   }
 
@@ -197,7 +333,7 @@ class _ManHinhBanDoState extends State<ManHinhBanDo> {
       return;
     }
 
-    chonCoSo(danhSach.first);
+    chonGoiY(danhSach.first);
   }
 
   Future<bool> xinQuyenViTri() async {
@@ -329,17 +465,18 @@ class _ManHinhBanDoState extends State<ManHinhBanDo> {
 
       markers.add(
         Marker(
-          width: dangChon ? 48 : 40,
-          height: dangChon ? 48 : 40,
+          width: dangChon ? 50 : 42,
+          height: dangChon ? 50 : 42,
           point: LatLng(coSo.viDo, coSo.kinhDo),
           child: GestureDetector(
             onTap: () {
+              focusTimKiem.unfocus();
               chonCoSo(coSo);
             },
             child: Icon(
               Icons.location_on_rounded,
               color: dangChon ? const Color(0xff16a34a) : Colors.black87,
-              size: dangChon ? 42 : 34,
+              size: dangChon ? 44 : 35,
             ),
           ),
         ),
@@ -381,29 +518,31 @@ class _ManHinhBanDoState extends State<ManHinhBanDo> {
 
   Widget oTimKiem() {
     return Container(
-      height: 50,
+      height: 42,
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.98),
-        borderRadius: BorderRadius.circular(25),
+        borderRadius: BorderRadius.circular(21),
         boxShadow: const [
           BoxShadow(
             color: Colors.black12,
-            blurRadius: 8,
+            blurRadius: 7,
             offset: Offset(1, 3),
           ),
         ],
       ),
       child: TextField(
         controller: oTimKiemController,
+        focusNode: focusTimKiem,
         textInputAction: TextInputAction.search,
         style: const TextStyle(
-          fontSize: 14,
+          fontSize: 13,
           color: Colors.black87,
           fontWeight: FontWeight.w500,
         ),
         onChanged: (value) {
           setState(() {
             tuKhoa = value;
+            coSoDangChon = null;
           });
         },
         onSubmitted: (_) {
@@ -413,38 +552,41 @@ class _ManHinhBanDoState extends State<ManHinhBanDo> {
           hintText: 'Tìm sân cầu lông',
           hintStyle: TextStyle(
             color: Colors.grey.shade500,
-            fontSize: 14,
+            fontSize: 13,
             fontWeight: FontWeight.w400,
           ),
           prefixIcon: Icon(
             Icons.search_rounded,
             color: Colors.grey.shade600,
-            size: 23,
+            size: 21,
           ),
           prefixIconConstraints: const BoxConstraints(
-            minWidth: 48,
-            minHeight: 50,
+            minWidth: 44,
+            minHeight: 42,
           ),
           suffixIcon: tuKhoa.trim().isEmpty
               ? null
               : IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
                   onPressed: () {
                     oTimKiemController.clear();
 
                     setState(() {
                       tuKhoa = '';
+                      coSoDangChon = null;
                     });
                   },
                   icon: const Icon(
                     Icons.close_rounded,
-                    size: 19,
+                    size: 18,
                   ),
                 ),
           border: InputBorder.none,
-          isDense: false,
-          contentPadding: const EdgeInsets.symmetric(
-            vertical: 15,
-            horizontal: 0,
+          isDense: true,
+          contentPadding: const EdgeInsets.only(
+            top: 12,
+            right: 10,
           ),
         ),
       ),
@@ -454,17 +596,17 @@ class _ManHinhBanDoState extends State<ManHinhBanDo> {
   Widget nutLoc() {
     return InkWell(
       onTap: moBangLoc,
-      borderRadius: BorderRadius.circular(22),
+      borderRadius: BorderRadius.circular(18),
       child: Container(
-        height: 50,
-        width: 78,
+        height: 42,
+        width: 68,
         decoration: BoxDecoration(
           color: Colors.white.withOpacity(0.98),
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(18),
           boxShadow: const [
             BoxShadow(
               color: Colors.black12,
-              blurRadius: 8,
+              blurRadius: 7,
               offset: Offset(1, 3),
             ),
           ],
@@ -475,14 +617,14 @@ class _ManHinhBanDoState extends State<ManHinhBanDo> {
             Icon(
               Icons.tune_rounded,
               color: Color(0xff2454ff),
-              size: 19,
+              size: 18,
             ),
-            SizedBox(width: 5),
+            SizedBox(width: 4),
             Text(
               'Lọc',
               style: TextStyle(
                 color: Color(0xff2454ff),
-                fontSize: 13,
+                fontSize: 12,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -542,11 +684,142 @@ class _ManHinhBanDoState extends State<ManHinhBanDo> {
     );
   }
 
-  Widget lopTimKiemVaLoc() {
+  Widget itemGoiY(CoSo coSo) {
+    return InkWell(
+      onTap: () {
+        chonGoiY(coSo);
+      },
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 10, 10, 10),
+        child: Row(
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: const Color(0xffeef4ff),
+                borderRadius: BorderRadius.circular(17),
+              ),
+              child: const Icon(
+                Icons.location_on_rounded,
+                color: Color(0xff2454ff),
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 11),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    coSo.tenCoSo,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Color(0xff172554),
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    coSo.diaChi,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  dinhDangKhoangCach(coSo),
+                  style: const TextStyle(
+                    color: Color(0xff2454ff),
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                const Icon(
+                  Icons.north_west_rounded,
+                  color: Colors.black54,
+                  size: 18,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget hopGoiY(List<CoSo> danhSach) {
+    if (!focusTimKiem.hasFocus || tuKhoa.trim().isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final goiY = danhSachGoiY(danhSach);
+
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      constraints: const BoxConstraints(
+        maxHeight: 300,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.98),
+        borderRadius: BorderRadius.circular(17),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 9,
+            offset: Offset(1, 3),
+          ),
+        ],
+      ),
+      child: goiY.isEmpty
+          ? const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text(
+                'Không tìm thấy sân phù hợp',
+                style: TextStyle(
+                  color: Color(0xff172554),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            )
+          : ListView.separated(
+              padding: const EdgeInsets.symmetric(vertical: 5),
+              shrinkWrap: true,
+              itemCount: goiY.length,
+              separatorBuilder: (context, index) {
+                return Divider(
+                  height: 1,
+                  thickness: 0.7,
+                  color: Colors.grey.shade200,
+                  indent: 58,
+                );
+              },
+              itemBuilder: (context, index) {
+                return itemGoiY(goiY[index]);
+              },
+            ),
+    );
+  }
+
+  Widget lopTimKiemVaLoc(List<CoSo> danhSachGoc) {
     return SafeArea(
       bottom: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(28, 12, 28, 0),
+        padding: const EdgeInsets.fromLTRB(24, 10, 24, 0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -555,11 +828,12 @@ class _ManHinhBanDoState extends State<ManHinhBanDo> {
                 Expanded(
                   child: oTimKiem(),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 8),
                 nutLoc(),
               ],
             ),
-            const SizedBox(height: 12),
+            hopGoiY(danhSachGoc),
+            const SizedBox(height: 10),
             nutGanBan(),
           ],
         ),
@@ -587,26 +861,26 @@ class _ManHinhBanDoState extends State<ManHinhBanDo> {
     final diaChi =
         coSo.diaChi.trim().isEmpty ? 'Chưa có địa chỉ' : coSo.diaChi.trim();
 
-    return Container(
-      height: 100,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(17),
-        boxShadow: const [
-          BoxShadow(
-            color: Colors.black26,
-            blurRadius: 9,
-            offset: Offset(2, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () {
-              moChiTiet(coSo);
-            },
-            child: ClipRRect(
+    return GestureDetector(
+      onTap: () {
+        moChiTiet(coSo);
+      },
+      child: Container(
+        height: 100,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(17),
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black26,
+              blurRadius: 9,
+              offset: Offset(2, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            ClipRRect(
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(17),
                 bottomLeft: Radius.circular(17),
@@ -622,18 +896,13 @@ class _ManHinhBanDoState extends State<ManHinhBanDo> {
                     )
                   : anhMacDinh(),
             ),
-          ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  GestureDetector(
-                    onTap: () {
-                      moChiTiet(coSo);
-                    },
-                    child: Text(
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
                       coSo.tenCoSo,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -643,186 +912,159 @@ class _ManHinhBanDoState extends State<ManHinhBanDo> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.star_rounded,
-                        size: 11,
-                        color: Color(0xffffc107),
-                      ),
-                      const SizedBox(width: 2),
-                      Text(
-                        danhGiaText,
-                        style: TextStyle(
-                          fontSize: 9,
-                          color: Colors.grey.shade700,
-                          fontWeight: FontWeight.w600,
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.star_rounded,
+                          size: 11,
+                          color: Color(0xffffc107),
                         ),
-                      ),
-                      const SizedBox(width: 5),
-                      Icon(
-                        Icons.location_on_rounded,
-                        size: 10,
-                        color: Colors.grey.shade600,
-                      ),
-                      const SizedBox(width: 2),
-                      Expanded(
-                        child: Text(
-                          dinhDangKhoangCach(coSo),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        const SizedBox(width: 2),
+                        Text(
+                          danhGiaText,
                           style: TextStyle(
                             fontSize: 9,
                             color: Colors.grey.shade700,
-                            fontWeight: FontWeight.w500,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.place_rounded,
-                        size: 10,
-                        color: Colors.grey.shade600,
-                      ),
-                      const SizedBox(width: 3),
-                      Expanded(
-                        child: Text(
-                          diaChi,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 9,
-                            color: Colors.grey.shade700,
-                            fontWeight: FontWeight.w500,
-                          ),
+                        const SizedBox(width: 5),
+                        Icon(
+                          Icons.location_on_rounded,
+                          size: 10,
+                          color: Colors.grey.shade600,
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.access_time_rounded,
-                        size: 10,
-                        color: Colors.grey.shade600,
-                      ),
-                      const SizedBox(width: 3),
-                      Text(
-                        '5:00 - 22:00',
-                        style: TextStyle(
-                          fontSize: 9,
-                          color: Colors.grey.shade700,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const Spacer(),
-                  Row(
-                    children: [
-                      Container(
-                        height: 21,
-                        padding: const EdgeInsets.symmetric(horizontal: 7),
-                        decoration: BoxDecoration(
-                          color: const Color(0xffdcfce7),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.circle,
-                              size: 6,
-                              color: Color(0xff16a34a),
+                        const SizedBox(width: 2),
+                        Expanded(
+                          child: Text(
+                            dinhDangKhoangCach(coSo),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 9,
+                              color: Colors.grey.shade700,
+                              fontWeight: FontWeight.w500,
                             ),
-                            SizedBox(width: 4),
-                            Text(
-                              'Còn trống',
-                              style: TextStyle(
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.place_rounded,
+                          size: 10,
+                          color: Colors.grey.shade600,
+                        ),
+                        const SizedBox(width: 3),
+                        Expanded(
+                          child: Text(
+                            diaChi,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 9,
+                              color: Colors.grey.shade700,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.access_time_rounded,
+                          size: 10,
+                          color: Colors.grey.shade600,
+                        ),
+                        const SizedBox(width: 3),
+                        Text(
+                          '5:00 - 22:00',
+                          style: TextStyle(
+                            fontSize: 9,
+                            color: Colors.grey.shade700,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Spacer(),
+                    Row(
+                      children: [
+                        Container(
+                          height: 21,
+                          padding: const EdgeInsets.symmetric(horizontal: 7),
+                          decoration: BoxDecoration(
+                            color: const Color(0xffdcfce7),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.circle,
+                                size: 6,
                                 color: Color(0xff16a34a),
+                              ),
+                              SizedBox(width: 4),
+                              Text(
+                                'Còn trống',
+                                style: TextStyle(
+                                  color: Color(0xff16a34a),
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          dinhDangGia(coSo.giaThapNhat),
+                          style: const TextStyle(
+                            fontSize: 9,
+                            color: Color(0xff2454ff),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        SizedBox(
+                          height: 25,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              moDatSan(coSo);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xff2454ff),
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 9,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: const Text(
+                              'Đặt',
+                              style: TextStyle(
                                 fontSize: 9,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-                      const Spacer(),
-                      Text(
-                        dinhDangGia(coSo.giaThapNhat),
-                        style: const TextStyle(
-                          fontSize: 9,
-                          color: Color(0xff2454ff),
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      SizedBox(
-                        height: 25,
-                        child: ElevatedButton(
-                          onPressed: () {
-                            moDatSan(coSo);
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xff2454ff),
-                            foregroundColor: Colors.white,
-                            elevation: 0,
-                            padding: const EdgeInsets.symmetric(horizontal: 9),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          child: const Text(
-                            'Đặt',
-                            style: TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.bold,
-                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget cardKhongCoSan() {
-    return Container(
-      height: 90,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.96),
-        borderRadius: BorderRadius.circular(17),
-        boxShadow: const [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 9,
-            offset: Offset(2, 4),
-          ),
-        ],
-      ),
-      child: const Center(
-        child: Text(
-          'Chưa có sân có tọa độ để hiển thị trên bản đồ',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: Color(0xff172554),
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-          ),
+          ],
         ),
       ),
     );
@@ -868,7 +1110,15 @@ class _ManHinhBanDoState extends State<ManHinhBanDo> {
           kieuSapXep = value;
         });
 
-        timVaDiChuyen();
+        final danhSachGoc = context.read<XuLiCoSo>().danhSachCoSo;
+        final danhSach = danhSachSauKhiLoc(danhSachGoc);
+
+        if (danhSach.isNotEmpty) {
+          diChuyenMap(
+            tinhTamDanhSach(danhSach),
+            zoom: 12.5,
+          );
+        }
       },
     );
   }
@@ -939,18 +1189,20 @@ class _ManHinhBanDoState extends State<ManHinhBanDo> {
     return Positioned(
       right: 12,
       bottom: 224,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.88),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Text(
-          '© OpenStreetMap',
-          style: TextStyle(
-            fontSize: 9,
-            color: Colors.grey.shade700,
-            fontWeight: FontWeight.w600,
+      child: IgnorePointer(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.88),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            '© OpenStreetMap',
+            style: TextStyle(
+              fontSize: 9,
+              color: Colors.grey.shade700,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
       ),
@@ -961,8 +1213,8 @@ class _ManHinhBanDoState extends State<ManHinhBanDo> {
   Widget build(BuildContext context) {
     final xuLyCoSo = context.watch<XuLiCoSo>();
 
-    final danhSach = danhSachSauKhiLoc(xuLyCoSo.danhSachCoSo);
-    final coSoHienTai = coSoDangHienThi(danhSach);
+    final danhSachHienThi = danhSachSauKhiLoc(xuLyCoSo.danhSachCoSo);
+    final coSoHienTai = coSoDangHienThi(danhSachHienThi);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -978,11 +1230,14 @@ class _ManHinhBanDoState extends State<ManHinhBanDo> {
               mapController: mapController,
               options: MapOptions(
                 initialCenter: tamBanDoDauTien(xuLyCoSo.danhSachCoSo),
-                initialZoom: 13,
+                initialZoom: 12.2,
                 minZoom: 5,
                 maxZoom: 18,
+                interactionOptions: const InteractionOptions(
+                  flags: InteractiveFlag.all,
+                ),
                 onTap: (tapPosition, point) {
-                  FocusScope.of(context).unfocus();
+                  focusTimKiem.unfocus();
                 },
               ),
               children: [
@@ -994,17 +1249,12 @@ class _ManHinhBanDoState extends State<ManHinhBanDo> {
                   circles: taoVongTronViTri(),
                 ),
                 MarkerLayer(
-                  markers: taoMarker(danhSach, coSoHienTai),
+                  markers: taoMarker(danhSachHienThi, coSoHienTai),
                 ),
               ],
             ),
           ),
-          Positioned.fill(
-            child: Container(
-              color: Colors.white.withOpacity(0.05),
-            ),
-          ),
-          lopTimKiemVaLoc(),
+          lopTimKiemVaLoc(xuLyCoSo.danhSachCoSo),
           chuThichOsm(),
           if (xuLyCoSo.dangTai)
             const Center(
@@ -1030,14 +1280,13 @@ class _ManHinhBanDoState extends State<ManHinhBanDo> {
                 ),
               ),
             ),
-          Positioned(
-            left: 14,
-            right: 14,
-            bottom: 104,
-            child: coSoHienTai == null
-                ? cardKhongCoSan()
-                : cardCoSoDangChon(coSoHienTai),
-          ),
+          if (coSoHienTai != null)
+            Positioned(
+              left: 14,
+              right: 14,
+              bottom: 104,
+              child: cardCoSoDangChon(coSoHienTai),
+            ),
         ],
       ),
     );

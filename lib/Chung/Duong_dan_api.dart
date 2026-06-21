@@ -1,6 +1,11 @@
 import 'package:flutter/foundation.dart';
 
 class DuongDanApi {
+  static const bool dungServerOnline = true;
+
+  static const String serverOnline =
+      'https://badminton-booking-backend-g45o.onrender.com';
+
   static const String cong = '3000';
 
   // Android Emulator dùng 10.0.2.2
@@ -8,6 +13,10 @@ class DuongDanApi {
   static const String ipMayTinh = '10.0.2.2';
 
   static String get gocServer {
+    if (dungServerOnline) {
+      return serverOnline;
+    }
+
     final host = kIsWeb ? 'localhost' : ipMayTinh;
     return 'http://$host:$cong';
   }
@@ -92,7 +101,9 @@ class DuongDanApi {
   }
 
   static String lichTheoCoSo(dynamic coSoId, {String? ngay}) {
-    if (ngay == null || ngay.isEmpty) return '/dat-san/lich?co_so_id=$coSoId';
+    if (ngay == null || ngay.isEmpty) {
+      return '/dat-san/lich?co_so_id=$coSoId';
+    }
     return '/dat-san/lich?co_so_id=$coSoId&ngay=$ngay';
   }
 
@@ -102,9 +113,10 @@ class DuongDanApi {
     return '/san/$id';
   }
 
-  // Backend hiện tại xem lịch công khai theo cơ sở, không có route lịch công khai theo từng sân.
   static String lichSan(dynamic sanId, {String? ngay}) {
-    if (ngay == null) return '/san/$sanId/lich';
+    if (ngay == null || ngay.isEmpty) {
+      return '/san/$sanId/lich';
+    }
     return '/san/$sanId/lich?ngay=$ngay';
   }
 

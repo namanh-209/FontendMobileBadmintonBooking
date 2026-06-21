@@ -1,10 +1,12 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../Chung/Duong_dan_anh.dart';
+import '../Chung/Duong_dan_api.dart';
 import '../Xu_li/Xu_li_tai_khoan.dart';
 
 class ManHinhChinhSuaTaiKhoan extends StatefulWidget {
@@ -21,16 +23,19 @@ class _ManHinhChinhSuaTaiKhoanState extends State<ManHinhChinhSuaTaiKhoan> {
   final soDienThoaiController = TextEditingController();
   final ngaySinhController = TextEditingController();
 
+  final ImagePicker imagePicker = ImagePicker();
+
   String gioiTinhDangChon = '';
   String avatarDangChon = '';
 
-  final ImagePicker imagePicker = ImagePicker();
+  bool dangChonAnh = false;
 
   String chuyenGioiTinhHienThi(String gioiTinh) {
     if (gioiTinh == '1') return 'Nam';
     if (gioiTinh == '0') return 'Nữ';
     if (gioiTinh == '2') return 'Khác';
     if (gioiTinh == '3') return 'Khác';
+
     return gioiTinh;
   }
 
@@ -59,23 +64,66 @@ class _ManHinhChinhSuaTaiKhoanState extends State<ManHinhChinhSuaTaiKhoan> {
   }
 
   Future<void> chonAnh() async {
-    final XFile? anh = await imagePicker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 80,
-    );
-
-    if (anh == null) return;
+    if (dangChonAnh) return;
 
     setState(() {
-      avatarDangChon = anh.path;
+      dangChonAnh = true;
     });
+
+    try {
+      final XFile? anh = await imagePicker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 80,
+      );
+
+      if (!mounted) return;
+      if (anh == null) return;
+
+      setState(() {
+        avatarDangChon = anh.path;
+      });
+    } on PlatformException catch (e) {
+      debugPrint('Lỗi chọn ảnh: $e');
+
+      if (!mounted) return;
+
+      String thongBao = 'Không chọn được ảnh';
+
+      if (e.code == 'already_active') {
+        thongBao = 'Bộ chọn ảnh đang mở, vui lòng đợi một chút';
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(thongBao),
+        ),
+      );
+    } catch (e) {
+      debugPrint('Lỗi chọn ảnh: $e');
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Không chọn được ảnh'),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          dangChonAnh = false;
+        });
+      } else {
+        dangChonAnh = false;
+      }
+    }
   }
 
   Future<void> chonNgaySinh() async {
     final DateTime? ngay = await showDatePicker(
       context: context,
-      initialDate: DateTime.tryParse(ngaySinhController.text) ??
-          DateTime(2005, 1, 1),
+      initialDate:
+          DateTime.tryParse(ngaySinhController.text) ?? DateTime(2005, 1, 1),
       firstDate: DateTime(1950),
       lastDate: DateTime.now(),
       helpText: 'Chọn ngày sinh',
@@ -84,6 +132,7 @@ class _ManHinhChinhSuaTaiKhoanState extends State<ManHinhChinhSuaTaiKhoan> {
     );
 
     if (ngay == null) return;
+    if (!mounted) return;
 
     final thang = ngay.month.toString().padLeft(2, '0');
     final ngayTrongThang = ngay.day.toString().padLeft(2, '0');
@@ -139,32 +188,40 @@ class _ManHinhChinhSuaTaiKhoanState extends State<ManHinhChinhSuaTaiKhoan> {
   Widget avatar() {
     Widget noiDung;
 
-    if (avatarDangChon.isNotEmpty) {
-      if (avatarDangChon.startsWith('http')) {
-        noiDung = Image.network(
-          avatarDangChon,
-          width: 96,
-          height: 96,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) {
-            return iconAvatarMacDinh();
-          },
-        );
-      } else if (File(avatarDangChon).existsSync()) {
-        noiDung = Image.file(
-          File(avatarDangChon),
-          width: 96,
-          height: 96,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) {
-            return iconAvatarMacDinh();
-          },
-        );
-      } else {
-        noiDung = iconAvatarMacDinh();
-      }
-    } else {
+    final avatar = avatarDangChon.trim();
+
+    if (avatar.isEmpty) {
       noiDung = iconAvatarMacDinh();
+    } else if (avatar.startsWith('http://') || avatar.startsWith('https://')) {
+      noiDung = Image.network(
+        avatar,
+        width: 96,
+        height: 96,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return iconAvatarMacDinh();
+        },
+      );
+    } else if (File(avatar).existsSync()) {
+      noiDung = Image.file(
+        File(avatar),
+        width: 96,
+        height: 96,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return iconAvatarMacDinh();
+        },
+      );
+    } else {
+      noiDung = Image.network(
+        DuongDanApi.linkAnh(avatar),
+        width: 96,
+        height: 96,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return iconAvatarMacDinh();
+        },
+      );
     }
 
     return Center(
@@ -193,20 +250,30 @@ class _ManHinhChinhSuaTaiKhoanState extends State<ManHinhChinhSuaTaiKhoan> {
             right: 0,
             bottom: 4,
             child: InkWell(
-              onTap: chonAnh,
+              onTap: dangChonAnh ? null : chonAnh,
               borderRadius: BorderRadius.circular(20),
               child: Container(
                 width: 34,
                 height: 34,
-                decoration: const BoxDecoration(
-                  color: Color(0xff2454ff),
+                decoration: BoxDecoration(
+                  color: dangChonAnh
+                      ? Colors.grey.shade500
+                      : const Color(0xff2454ff),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
-                  Icons.camera_alt_rounded,
-                  color: Colors.white,
-                  size: 18,
-                ),
+                child: dangChonAnh
+                    ? const Padding(
+                        padding: EdgeInsets.all(8),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(
+                        Icons.camera_alt_rounded,
+                        color: Colors.white,
+                        size: 18,
+                      ),
               ),
             ),
           ),
