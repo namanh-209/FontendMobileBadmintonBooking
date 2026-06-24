@@ -1,96 +1,55 @@
-import '../Chung/Duong_dan_api.dart';
-
 class NguoiDung {
   final int id;
   final String hoTen;
   final String email;
-  final String soDienThoai;
-  final String ngaySinh;
-  final String gioiTinh;
   final String avatar;
-  final String username;
-  final int isAdmin;
+  final String soDienThoai;
+  final String diaChi;
+  final String vaiTro;
+  final String trangThai;
+  final String gioiTinh;
+  final String ngaySinh;
 
-  NguoiDung({
+  const NguoiDung({
     this.id = 0,
     this.hoTen = '',
     this.email = '',
-    this.soDienThoai = '',
-    this.ngaySinh = '',
-    this.gioiTinh = '',
     this.avatar = '',
-    this.username = '',
-    this.isAdmin = 0,
+    this.soDienThoai = '',
+    this.diaChi = '',
+    this.vaiTro = '',
+    this.trangThai = '',
+    this.gioiTinh = '',
+    this.ngaySinh = '',
   });
 
   factory NguoiDung.fromJson(Map<String, dynamic> json) {
-    final Map<String, dynamic> user;
-
-    if (json['user'] is Map) {
-      user = Map<String, dynamic>.from(json['user']);
-    } else if (json['data'] is Map) {
-      user = Map<String, dynamic>.from(json['data']);
-    } else if (json['nguoiDung'] is Map) {
-      user = Map<String, dynamic>.from(json['nguoiDung']);
-    } else {
-      user = json;
-    }
-
-    final tenDangNhap = (user['username'] ??
-            user['ten_dang_nhap'] ??
-            user['tai_khoan'] ??
-            '')
-        .toString();
-
-    final tenHienThi = (user['hoTen'] ??
-            user['ho_ten'] ??
-            user['hoten'] ??
-            user['name'] ??
-            user['ten'] ??
-            user['username'] ??
-            user['ten_dang_nhap'] ??
-            '')
-        .toString();
+    final data = _layMapNguoiDung(json);
 
     return NguoiDung(
-      id: _toInt(
-            user['id'] ??
-                user['nguoi_dung_id'] ??
-                user['user_id'] ??
-                user['id_nguoi_dung'],
-          ) ??
-          0,
-      hoTen: tenHienThi,
-      username: tenDangNhap.isNotEmpty ? tenDangNhap : tenHienThi,
-      email: (user['email'] ?? '').toString(),
-      soDienThoai: (user['soDienThoai'] ??
-              user['so_dien_thoai'] ??
-              user['sdt'] ??
-              user['phone'] ??
-              user['dien_thoai'] ??
-              '')
-          .toString(),
-      ngaySinh: _catNgay(
-        user['ngaySinh'] ?? user['ngay_sinh'] ?? user['birthday'] ?? user['date_of_birth'],
+      id: _intTuJson(
+        data['id'] ??
+            data['nguoi_dung_id'] ??
+            data['nguoiDungId'] ??
+            data['user_id'],
       ),
-      gioiTinh: (user['gioiTinh'] ??
-              user['gioi_tinh'] ??
-              user['gender'] ??
-              '')
-          .toString(),
-      avatar: _chuanHoaAvatar(
-        user['avatar'] ??
-            user['avatar_url'] ??
-            user['anh_dai_dien'] ??
-            user['anhDaiDien'] ??
-            user['hinh_anh'] ??
-            user['hinhAnh'] ??
-            user['image'] ??
-            user['photo'] ??
-            user['url'] ??
-            '',
-      ),
-      isAdmin: _toInt(user['is_admin'] ?? user['isAdmin'] ?? user['vai_tro_id'] ?? user['role'] ?? 0) ?? 0,
+      hoTen:
+          '${data['ho_ten'] ?? data['hoTen'] ?? data['ten'] ?? data['name'] ?? data['full_name'] ?? data['fullName'] ?? ''}',
+      email: '${data['email'] ?? data['email_nguoi_dung'] ?? ''}',
+      avatar:
+          '${data['avatar'] ?? data['anh_dai_dien'] ?? data['anhDaiDien'] ?? data['hinh_anh'] ?? data['hinhAnh'] ?? ''}',
+      soDienThoai:
+          '${data['so_dien_thoai'] ?? data['soDienThoai'] ?? data['sdt'] ?? data['dien_thoai'] ?? data['dienThoai'] ?? data['phone'] ?? data['phone_number'] ?? data['phoneNumber'] ?? data['mobile'] ?? ''}',
+      diaChi:
+          '${data['dia_chi'] ?? data['diaChi'] ?? data['address'] ?? ''}',
+      vaiTro:
+          '${data['vai_tro'] ?? data['vaiTro'] ?? data['role'] ?? ''}',
+      trangThai:
+          '${data['trang_thai'] ?? data['trangThai'] ?? data['status'] ?? ''}',
+      gioiTinh:
+          '${data['gioi_tinh'] ?? data['gioiTinh'] ?? data['gender'] ?? ''}',
+      ngaySinh:
+          '${data['ngay_sinh'] ?? data['ngaySinh'] ?? data['birthday'] ?? data['date_of_birth'] ?? data['dateOfBirth'] ?? ''}',
     );
   }
 
@@ -98,13 +57,14 @@ class NguoiDung {
     return {
       'id': id,
       'ho_ten': hoTen,
-      'username': username,
       'email': email,
-      'so_dien_thoai': soDienThoai,
-      'ngay_sinh': ngaySinh,
-      'gioi_tinh': gioiTinh,
       'avatar': avatar,
-      'is_admin': isAdmin,
+      'so_dien_thoai': soDienThoai,
+      'dia_chi': diaChi,
+      'vai_tro': vaiTro,
+      'trang_thai': trangThai,
+      'gioi_tinh': gioiTinh,
+      'ngay_sinh': ngaySinh,
     };
   }
 
@@ -112,41 +72,82 @@ class NguoiDung {
     int? id,
     String? hoTen,
     String? email,
-    String? soDienThoai,
-    String? ngaySinh,
-    String? gioiTinh,
     String? avatar,
-    String? username,
-    int? isAdmin,
+    String? soDienThoai,
+    String? diaChi,
+    String? vaiTro,
+    String? trangThai,
+    String? gioiTinh,
+    String? ngaySinh,
   }) {
     return NguoiDung(
       id: id ?? this.id,
       hoTen: hoTen ?? this.hoTen,
       email: email ?? this.email,
-      soDienThoai: soDienThoai ?? this.soDienThoai,
-      ngaySinh: ngaySinh ?? this.ngaySinh,
-      gioiTinh: gioiTinh ?? this.gioiTinh,
       avatar: avatar ?? this.avatar,
-      username: username ?? this.username,
-      isAdmin: isAdmin ?? this.isAdmin,
+      soDienThoai: soDienThoai ?? this.soDienThoai,
+      diaChi: diaChi ?? this.diaChi,
+      vaiTro: vaiTro ?? this.vaiTro,
+      trangThai: trangThai ?? this.trangThai,
+      gioiTinh: gioiTinh ?? this.gioiTinh,
+      ngaySinh: ngaySinh ?? this.ngaySinh,
     );
   }
+}
 
-  static String _catNgay(dynamic value) {
-    final text = value?.toString() ?? '';
-    if (text.length >= 10) return text.substring(0, 10);
-    return text;
+Map<String, dynamic> _layMapNguoiDung(Map<String, dynamic> json) {
+  if (json['nguoi_dung'] is Map) {
+    return Map<String, dynamic>.from(json['nguoi_dung']);
   }
 
-  static String _chuanHoaAvatar(dynamic value) {
-    final text = value?.toString().trim() ?? '';
-    if (text.isEmpty) return '';
-    return DuongDanApi.linkAnh(text);
+  if (json['nguoiDung'] is Map) {
+    return Map<String, dynamic>.from(json['nguoiDung']);
   }
 
-  static int? _toInt(dynamic value) {
-    if (value == null) return null;
-    if (value is int) return value;
-    return int.tryParse(value.toString());
+  if (json['user'] is Map) {
+    return Map<String, dynamic>.from(json['user']);
   }
+
+  if (json['tai_khoan'] is Map) {
+    return Map<String, dynamic>.from(json['tai_khoan']);
+  }
+
+  if (json['taiKhoan'] is Map) {
+    return Map<String, dynamic>.from(json['taiKhoan']);
+  }
+
+  if (json['data'] is Map) {
+    final data = Map<String, dynamic>.from(json['data']);
+
+    if (data['nguoi_dung'] is Map) {
+      return Map<String, dynamic>.from(data['nguoi_dung']);
+    }
+
+    if (data['nguoiDung'] is Map) {
+      return Map<String, dynamic>.from(data['nguoiDung']);
+    }
+
+    if (data['user'] is Map) {
+      return Map<String, dynamic>.from(data['user']);
+    }
+
+    if (data['tai_khoan'] is Map) {
+      return Map<String, dynamic>.from(data['tai_khoan']);
+    }
+
+    if (data['taiKhoan'] is Map) {
+      return Map<String, dynamic>.from(data['taiKhoan']);
+    }
+
+    return data;
+  }
+
+  return json;
+}
+
+int _intTuJson(dynamic value) {
+  if (value == null) return 0;
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  return int.tryParse('$value') ?? 0;
 }
