@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../Chung/Duong_dan_anh.dart';
+import '../Chung/Duong_dan_api.dart';
 import '../Dung_lai/Thanh_duoi.dart';
 import '../Xu_li/Xu_li_tai_khoan.dart';
 import 'Man_hinh_chinh_sua_tai_khoan.dart';
@@ -54,18 +55,13 @@ class ManHinhTaiKhoan extends StatelessWidget {
   }
 
   String hienThiGioiTinh(String gioiTinh) {
-    if (gioiTinh == '1') return 'Nam';
-    if (gioiTinh == '0') return 'Nữ';
-    if (gioiTinh == '2') return 'Khác';
-    if (gioiTinh == '3') return 'Khác';
+    final text = gioiTinh.trim().toLowerCase();
 
-    if (gioiTinh.toLowerCase() == 'nam') return 'Nam';
-
-    if (gioiTinh.toLowerCase() == 'nữ' || gioiTinh.toLowerCase() == 'nu') {
+    if (text == '1' || text == 'nam' || text == 'male') return 'Nam';
+    if (text == '0' || text == '2' || text == 'nữ' || text == 'nu' || text == 'female') {
       return 'Nữ';
     }
-
-    if (gioiTinh.toLowerCase() == 'khác' || gioiTinh.toLowerCase() == 'khac') {
+    if (text == '3' || text == 'khác' || text == 'khac' || text == 'other') {
       return 'Khác';
     }
 
@@ -421,7 +417,7 @@ class ManHinhTaiKhoan extends StatelessWidget {
 
   Widget manHinhChuaDangNhap(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(18, 12, 18, 18),
+      padding: const EdgeInsets.fromLTRB(18, 12, 18, 105),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -460,19 +456,7 @@ class ManHinhTaiKhoan extends StatelessWidget {
     Widget noiDungAvatar;
 
     if (avatar.isNotEmpty) {
-      if (avatar.startsWith('http')) {
-        noiDungAvatar = ClipOval(
-          child: Image.network(
-            avatar,
-            width: 92,
-            height: 92,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) {
-              return avatarChuCai(hoTen);
-            },
-          ),
-        );
-      } else if (File(avatar).existsSync()) {
+      if (File(avatar).existsSync()) {
         noiDungAvatar = ClipOval(
           child: Image.file(
             File(avatar),
@@ -485,7 +469,19 @@ class ManHinhTaiKhoan extends StatelessWidget {
           ),
         );
       } else {
-        noiDungAvatar = avatarChuCai(hoTen);
+        final avatarHienThi = DuongDanApi.linkAnh(avatar);
+
+        noiDungAvatar = ClipOval(
+          child: Image.network(
+            avatarHienThi,
+            width: 92,
+            height: 92,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              return avatarChuCai(hoTen);
+            },
+          ),
+        );
       }
     } else {
       noiDungAvatar = avatarChuCai(hoTen);
@@ -702,7 +698,7 @@ class ManHinhTaiKhoan extends StatelessWidget {
     final avatar = nguoiDung?.avatar ?? '';
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(18, 12, 18, 18),
+      padding: const EdgeInsets.fromLTRB(18, 12, 18, 105),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

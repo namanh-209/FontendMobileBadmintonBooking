@@ -232,14 +232,20 @@ class XuLiTaiKhoan extends ChangeNotifier {
     }
   }
 
-  int? chuyenGioiTinhSangSo(String? gioiTinh) {
-    if (gioiTinh == null || gioiTinh.isEmpty) return null;
+  String? chuyenGioiTinhSangApi(String? gioiTinh) {
+    if (gioiTinh == null || gioiTinh.trim().isEmpty) return null;
 
-    if (gioiTinh == 'Nam') return 1;
-    if (gioiTinh == 'Nữ') return 0;
-    if (gioiTinh == 'Khác') return 2;
+    final text = gioiTinh.trim().toLowerCase();
 
-    return int.tryParse(gioiTinh);
+    if (text == 'nam' || text == 'male' || text == '1') return 'male';
+    if (text == 'nữ' || text == 'nu' || text == 'female' || text == '0' || text == '2') {
+      return 'female';
+    }
+    if (text == 'khác' || text == 'khac' || text == 'other' || text == '3') {
+      return 'other';
+    }
+
+    return gioiTinh.trim();
   }
 
   Future<String> layTokenDangNhap() async {
@@ -285,7 +291,7 @@ class XuLiTaiKhoan extends ChangeNotifier {
         token: tokenHienTai,
         hoTen: hoTen,
         soDienThoai: soDienThoai,
-        gioiTinh: chuyenGioiTinhSangSo(gioiTinh),
+        gioiTinh: chuyenGioiTinhSangApi(gioiTinh),
         ngaySinh: ngaySinh ?? '',
         avatar: avatar ?? '',
       );
@@ -405,6 +411,22 @@ class XuLiTaiKhoan extends ChangeNotifier {
         GoiApi.token = tokenDaLuu;
         nguoiDung = NguoiDung.fromJson(userMap);
         daDangNhap = true;
+
+        try {
+          final thongTinMoi = await TaiKhoanApi().layThongTinTaiKhoan(
+            token: tokenDaLuu,
+          );
+          final userMoi = thongTinMoi['user'];
+
+          if (userMoi is Map) {
+            nguoiDung = NguoiDung.fromJson(
+              Map<String, dynamic>.from(userMoi),
+            );
+            await luuDangNhap();
+          }
+        } catch (_) {
+          // Nếu mạng chậm hoặc Render chưa thức dậy thì vẫn dùng dữ liệu đã lưu.
+        }
       } catch (e) {
         token = null;
         GoiApi.token = null;

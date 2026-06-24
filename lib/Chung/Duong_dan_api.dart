@@ -1,47 +1,55 @@
-import 'package:flutter/foundation.dart';
-
 class DuongDanApi {
-  static const bool dungServerOnline = true;
+  DuongDanApi._();
 
-  static const String serverOnline =
-      'https://badminton-booking-backend-g45o.onrender.com';
+  // Host đang dùng giống web/deploy.
+  // Nếu muốn chạy backend local trên Android Emulator thì đổi hostDangDung = hostAndroidEmulator.
+  static const String hostOnline = 'https://badminton-booking-backend-g45o.onrender.com';
+  static const String hostWebLocal = 'http://localhost:3000';
+  static const String hostAndroidEmulator = 'http://10.0.2.2:3000';
+  static const String hostDienThoaiThat = 'http://192.168.1.10:3000';
 
-  static const String cong = '3000';
+  static const String hostDangDung = hostOnline;
 
-  // Android Emulator dùng 10.0.2.2
-  // Điện thoại thật thì đổi thành IPv4 máy bạn, ví dụ: 192.168.1.8
-  static const String ipMayTinh = '10.0.2.2';
+  static const String gocServer = hostDangDung;
+  static const String gocApi = '$hostDangDung/api';
 
-  static String get gocServer {
-    if (dungServerOnline) {
-      return serverOnline;
-    }
+  // Alias để không lỗi các file cũ.
+  static const String goc = gocApi;
+  static const String api = gocApi;
+  static const String baseUrl = gocApi;
+  static const String baseUrlApi = gocApi;
+  static const String duongDanApi = gocApi;
+  static const String serverBaseUrl = gocServer;
 
-    final host = kIsWeb ? 'localhost' : ipMayTinh;
-    return 'http://$host:$cong';
+  static String noiApi(String path) {
+    final value = path.trim();
+    if (value.startsWith('http://') || value.startsWith('https://')) return value;
+    if (value.startsWith('/api/')) return '$hostDangDung$value';
+    if (value == '/api') return gocApi;
+    if (value.startsWith('/')) return '$gocApi$value';
+    return '$gocApi/$value';
   }
 
-  static String get goc {
-    return '$gocServer/api';
-  }
-
-  static String linkAnh(String url) {
-    final value = url.trim();
-
+  static String noiServer(String path) {
+    final value = path.trim();
     if (value.isEmpty) return '';
-    if (value.startsWith('http://') || value.startsWith('https://')) {
-      return value;
-    }
-    if (value.startsWith('/')) {
-      return '$gocServer$value';
-    }
-
+    if (value.startsWith('http://') || value.startsWith('https://')) return value;
+    if (value.startsWith('//')) return 'https:$value';
+    if (value.startsWith('res.cloudinary.com/')) return 'https://$value';
+    if (value.startsWith('/')) return '$gocServer$value';
     return '$gocServer/$value';
   }
 
+  static String anh(String? duongDanAnh) {
+    final value = (duongDanAnh ?? '').trim();
+    if (value.isEmpty || value == 'null') return '';
+    return noiServer(value);
+  }
+
+  static String linkAnh(String? duongDanAnh) => anh(duongDanAnh);
+
   static String taoQuery(Map<String, dynamic> params) {
     final query = <String, String>{};
-
     params.forEach((key, value) {
       if (value == null) return;
       final text = value.toString().trim();
@@ -67,6 +75,7 @@ class DuongDanApi {
 
   // Cơ sở / sân
   static const String danhSachCoSo = '/co-so';
+  static const String danhSachSan = '/san';
 
   static String danhSachCoSoLoc({
     String? tuKhoa,
@@ -92,58 +101,48 @@ class DuongDanApi {
     })}';
   }
 
-  static String chiTietCoSo(dynamic id) {
-    return '/co-so/$id';
-  }
+  static String chiTietCoSo(dynamic id) => '/co-so/$id';
 
   static String danhSachSanTheoCoSo(dynamic coSoId) {
     return '/san?co_so_id=$coSoId';
   }
 
+  static String chiTietSan(dynamic id) => '/san/$id';
+
   static String lichTheoCoSo(dynamic coSoId, {String? ngay}) {
-    if (ngay == null || ngay.isEmpty) {
-      return '/dat-san/lich?co_so_id=$coSoId';
-    }
-    return '/dat-san/lich?co_so_id=$coSoId&ngay=$ngay';
-  }
-
-  static const String danhSachSan = '/san';
-
-  static String chiTietSan(dynamic id) {
-    return '/san/$id';
+    final query = taoQuery({
+      'co_so_id': coSoId,
+      'ngay': ngay,
+    });
+    return '/dat-san/lich$query';
   }
 
   static String lichSan(dynamic sanId, {String? ngay}) {
-    if (ngay == null || ngay.isEmpty) {
-      return '/san/$sanId/lich';
-    }
-    return '/san/$sanId/lich?ngay=$ngay';
+    final query = taoQuery({'ngay': ngay});
+    return '/san/$sanId/lich$query';
   }
 
-  // Đặt sân
+  // Giá / khuyến mãi công khai giống web
+  static const String bangGiaCongKhai = '/bang-gia/cong-khai';
+  static const String khuyenMaiCongKhai = '/khuyen-mai/cong-khai';
+
+  // Đặt sân giống web
+  static const String lichDatSanCongKhai = '/dat-san/lich';
   static const String giuChoDatSan = '/dat-san/giu-cho';
   static const String lichSuDatSanCuaToi = '/dat-san/lich-su-cua-toi';
 
-  static String huyGiuCho(dynamic datSanId) {
-    return '/dat-san/$datSanId/huy-giu-cho';
-  }
+  static String huyGiuCho(dynamic datSanId) => '/dat-san/$datSanId/huy-giu-cho';
+  static String capNhatGhiChuDatSan(dynamic datSanId) => '/dat-san/$datSanId/ghi-chu';
+  static String apDungKhuyenMai(dynamic datSanId) => '/dat-san/$datSanId/khuyen-mai';
+  static String huyDatSan(dynamic datSanId) => '/huy-dat-san/$datSanId';
 
-  // Thanh toán
+  // Thanh toán giống web: VNPay tạo URL
   static const String taoUrlThanhToanVnpay = '/thanh-toan/vnpay/tao-url';
   static const String vnpayReturn = '/thanh-toan/vnpay/return';
 
   // Yêu thích
   static const String danhSachYeuThich = '/yeu-thich';
-
-  static String themYeuThich(dynamic coSoId) {
-    return '/yeu-thich/$coSoId';
-  }
-
-  static String xoaYeuThich(dynamic coSoId) {
-    return '/yeu-thich/$coSoId';
-  }
-
-  static String kiemTraYeuThich(dynamic coSoId) {
-    return '/yeu-thich/check/$coSoId';
-  }
+  static String themYeuThich(dynamic coSoId) => '/yeu-thich/$coSoId';
+  static String xoaYeuThich(dynamic coSoId) => '/yeu-thich/$coSoId';
+  static String kiemTraYeuThich(dynamic coSoId) => '/yeu-thich/check/$coSoId';
 }

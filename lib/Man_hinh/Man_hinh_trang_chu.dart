@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+
+import '../Chung/Duong_dan_api.dart';
 import 'package:provider/provider.dart';
 
 import '../Chung/Duong_dan_anh.dart';
@@ -135,19 +137,7 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
     Widget noiDungAvatar;
 
     if (avatar.isNotEmpty) {
-      if (avatar.startsWith('http')) {
-        noiDungAvatar = ClipOval(
-          child: Image.network(
-            avatar,
-            width: 40,
-            height: 40,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) {
-              return avatarChuCaiNho(hoTen);
-            },
-          ),
-        );
-      } else if (File(avatar).existsSync()) {
+      if (File(avatar).existsSync()) {
         noiDungAvatar = ClipOval(
           child: Image.file(
             File(avatar),
@@ -160,7 +150,17 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
           ),
         );
       } else {
-        noiDungAvatar = avatarChuCaiNho(hoTen);
+        noiDungAvatar = ClipOval(
+          child: Image.network(
+            DuongDanApi.linkAnh(avatar),
+            width: 40,
+            height: 40,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              return avatarChuCaiNho(hoTen);
+            },
+          ),
+        );
       }
     } else {
       noiDungAvatar = avatarChuCaiNho(hoTen);
@@ -436,7 +436,7 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
                     ),
                     child: coSo.hinhAnh.isNotEmpty
                         ? Image.network(
-                            coSo.hinhAnh,
+                            DuongDanApi.linkAnh(coSo.hinhAnh),
                             width: 108,
                             height: 108,
                             fit: BoxFit.cover,
@@ -714,12 +714,12 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
       );
     }
 
-    final danhSachHienThi = xuLiCoSo.danhSachCoSo.take(5).toList();
+    final danhSachHienThi = xuLiCoSo.danhSachCoSo;
 
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: EdgeInsets.zero,
       itemCount: danhSachHienThi.length,
       itemBuilder: (context, index) {
         return theCoSo(danhSachHienThi[index]);
@@ -757,7 +757,7 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
               children: [
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(14, 9, 14, 10),
+                    padding: const EdgeInsets.fromLTRB(14, 9, 14, 88),
                     child: Column(
                       children: [
                         Row(

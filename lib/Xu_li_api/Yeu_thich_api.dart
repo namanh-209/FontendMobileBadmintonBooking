@@ -2,8 +2,10 @@ import '../Chung/Duong_dan_api.dart';
 import '../Server/Goi_api.dart';
 
 class YeuThichApi {
+  final GoiApi _api = GoiApi();
+
   Future<List<int>> layDanhSachYeuThich() async {
-    final data = await GoiApi.get(DuongDanApi.danhSachYeuThich);
+    final data = await _api.get(DuongDanApi.danhSachYeuThich);
 
     final list = data is Map ? (data['data'] ?? data['items'] ?? []) : data;
 
@@ -17,23 +19,30 @@ class YeuThichApi {
   }
 
   Future<void> themYeuThich(int coSoId) async {
-    await GoiApi.post(
+    await _api.post(
       DuongDanApi.themYeuThich(coSoId),
-      {},
+      body: {},
     );
   }
 
   Future<void> xoaYeuThich(int coSoId) async {
-    await GoiApi.delete(DuongDanApi.xoaYeuThich(coSoId));
+    await _api.delete(DuongDanApi.xoaYeuThich(coSoId));
   }
 
   Future<bool> kiemTraYeuThich(int coSoId) async {
-    final data = await GoiApi.get(DuongDanApi.kiemTraYeuThich(coSoId));
+    try {
+      final data = await _api.get(DuongDanApi.kiemTraYeuThich(coSoId));
 
-    if (data is Map) {
-      return data['isFavorite'] == true || data['isFavorite'].toString() == '1';
-    }
+      if (data is Map) {
+        return data['isFavorite'] == true ||
+            data['is_favorite'] == true ||
+            data['da_yeu_thich'] == true ||
+            data['isFavorite'].toString() == '1' ||
+            data['is_favorite'].toString() == '1';
+      }
+    } catch (_) {}
 
-    return false;
+    final list = await layDanhSachYeuThich();
+    return list.contains(coSoId);
   }
 }

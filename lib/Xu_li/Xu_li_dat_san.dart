@@ -4,76 +4,65 @@ import '../Mau_du_lieu/Dat_san.dart';
 import '../Xu_li_api/Dat_san_api.dart';
 
 class XuLiDatSan extends ChangeNotifier {
+  final DatSanApi _api = DatSanApi();
+
+  List<DatSan> danhSachDatSan = [];
   bool dangTai = false;
   String? thongBaoLoi;
-  String? thongBaoThanhCong;
 
-  List<DatSan> lichSuDatSan = [];
+  Future<void> layLichDatCuaToi() async {
+    dangTai = true;
+    thongBaoLoi = null;
+    notifyListeners();
 
-  Future<Map<String, dynamic>?> giuChoTamThoi({
+    try {
+      danhSachDatSan = await _api.layLichDatCuaToi();
+    } catch (e) {
+      thongBaoLoi = '$e';
+    }
+
+    dangTai = false;
+    notifyListeners();
+  }
+
+  Future<DatSan?> taoDatSan({
     required int coSoId,
-    required String ngay,
-    required List<Map<String, dynamic>> slots,
+    required List<Map<String, dynamic>> chiTiet,
     String ghiChu = '',
   }) async {
     dangTai = true;
     thongBaoLoi = null;
-    thongBaoThanhCong = null;
     notifyListeners();
 
     try {
-      final ketQua = await DatSanApi().giuChoTamThoi(
+      final datSan = await _api.taoDatSan(
         coSoId: coSoId,
-        ngay: ngay,
-        slots: slots,
+        chiTiet: chiTiet,
         ghiChu: ghiChu,
       );
 
-      thongBaoThanhCong = ketQua['message']?.toString() ?? 'Giữ chỗ thành công';
+      danhSachDatSan.insert(0, datSan);
       dangTai = false;
       notifyListeners();
-      return ketQua;
+      return datSan;
     } catch (e) {
-      thongBaoLoi = e.toString().replaceAll('Exception: ', '');
+      thongBaoLoi = '$e';
       dangTai = false;
       notifyListeners();
       return null;
     }
   }
 
-  Future<void> layLichSuDatSan() async {
-    dangTai = true;
-    thongBaoLoi = null;
-    notifyListeners();
-
+  Future<bool> huyDatSan({
+    required int datSanId,
+    required String lyDoHuy,
+  }) async {
     try {
-      lichSuDatSan = await DatSanApi().layLichSuDatSanCuaToi();
-      dangTai = false;
-      notifyListeners();
-    } catch (e) {
-      lichSuDatSan = [];
-      thongBaoLoi = e.toString().replaceAll('Exception: ', '');
-      dangTai = false;
-      notifyListeners();
-    }
-  }
-
-  Future<bool> huyGiuCho(dynamic datSanId) async {
-    dangTai = true;
-    thongBaoLoi = null;
-    thongBaoThanhCong = null;
-    notifyListeners();
-
-    try {
-      final ketQua = await DatSanApi().huyGiuCho(datSanId);
-      thongBaoThanhCong = ketQua['message']?.toString() ?? 'Đã hủy giữ chỗ';
-      await layLichSuDatSan();
-      dangTai = false;
-      notifyListeners();
+      await _api.huyDatSan(datSanId: datSanId, lyDoHuy: lyDoHuy);
+      await layLichDatCuaToi();
       return true;
     } catch (e) {
-      thongBaoLoi = e.toString().replaceAll('Exception: ', '');
-      dangTai = false;
+      thongBaoLoi = '$e';
       notifyListeners();
       return false;
     }

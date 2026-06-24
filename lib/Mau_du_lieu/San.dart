@@ -1,16 +1,29 @@
 import '../Chung/Duong_dan_api.dart';
 
+double _doubleTuJson(dynamic value) {
+  if (value == null) return 0;
+  if (value is num) return value.toDouble();
+  return double.tryParse('$value') ?? 0;
+}
+
+int _intTuJson(dynamic value) {
+  if (value == null) return 0;
+  if (value is num) return value.toInt();
+  return int.tryParse('$value') ?? 0;
+}
+
 class San {
   final int id;
   final int sanId;
   final int coSoId;
   final String ten;
-  final String tenSan;
+  final int danhMucSanId;
+  final String tenDanhMuc;
   final String tenCoSo;
   final String diaChi;
   final String danhMuc;
-  final String trangThai;
   final String hinhAnh;
+  final int trangThai;
   final double gia;
   final double giaThapNhat;
   final double viDo;
@@ -22,42 +35,55 @@ class San {
     this.coSoId = 0,
     String? ten,
     String? tenSan,
+    this.danhMucSanId = 0,
+    this.tenDanhMuc = '',
     this.tenCoSo = '',
     this.diaChi = '',
     this.danhMuc = '',
-    this.trangThai = '',
     this.hinhAnh = '',
+    this.trangThai = 1,
     this.gia = 0,
-    double? giaThapNhat,
+    this.giaThapNhat = 0,
     this.viDo = 0,
     this.kinhDo = 0,
   })  : id = id ?? sanId ?? 0,
         sanId = sanId ?? id ?? 0,
-        ten = ten ?? tenSan ?? 'Sân cầu lông',
-        tenSan = tenSan ?? ten ?? 'Sân cầu lông',
-        giaThapNhat = giaThapNhat ?? gia;
+        ten = ten ?? tenSan ?? '';
+
+  String get tenSan => ten;
+  String get anhChinh => hinhAnh;
+  bool get dangHoatDong => trangThai == 1;
 
   factory San.fromJson(Map<String, dynamic> json) {
-    final map = _unwrap(json);
-    final idLayDuoc = _toInt(map['id'] ?? map['san_id'] ?? map['sanId']) ?? 0;
-    final tenLayDuoc = (map['ten_san'] ?? map['tenSan'] ?? map['ten'] ?? map['name'] ?? 'Sân cầu lông').toString();
-    final giaLayDuoc = _toDouble(map['gia_thap_nhat'] ?? map['giaThapNhat'] ?? map['gia'] ?? map['price']) ?? 0;
+    final data = json['data'] is Map ? Map<String, dynamic>.from(json['data']) : json;
+
+    final rawAnh = data['hinh_anh'] ??
+        data['url_anh'] ??
+        data['anh_chinh'] ??
+        data['hinhAnh'] ??
+        data['avatar'] ??
+        data['url'] ??
+        data['image'] ??
+        '';
+
+    final idLayDuoc = _intTuJson(data['id'] ?? data['san_id'] ?? data['sanId']);
 
     return San(
       id: idLayDuoc,
       sanId: idLayDuoc,
-      coSoId: _toInt(map['co_so_id'] ?? map['coSoId']) ?? 0,
-      ten: tenLayDuoc,
-      tenSan: tenLayDuoc,
-      tenCoSo: (map['ten_co_so'] ?? map['tenCoSo'] ?? '').toString(),
-      diaChi: (map['dia_chi'] ?? map['diaChi'] ?? map['address'] ?? '').toString(),
-      danhMuc: (map['danh_muc'] ?? map['ten_danh_muc'] ?? map['category'] ?? '').toString(),
-      trangThai: (map['trang_thai'] ?? map['status'] ?? '').toString(),
-      hinhAnh: _chuanHoaAnh(map['anh_chinh'] ?? map['hinh_anh'] ?? map['hinhAnh'] ?? map['url'] ?? map['image'] ?? ''),
-      gia: giaLayDuoc,
-      giaThapNhat: giaLayDuoc,
-      viDo: _toDouble(map['vi_do'] ?? map['viDo'] ?? map['latitude'] ?? map['lat']) ?? 0,
-      kinhDo: _toDouble(map['kinh_do'] ?? map['kinhDo'] ?? map['longitude'] ?? map['lng']) ?? 0,
+      coSoId: _intTuJson(data['co_so_id'] ?? data['coSoId']),
+      ten: '${data['ten'] ?? data['ten_san'] ?? data['tenSan'] ?? data['name'] ?? 'Sân cầu lông'}',
+      danhMucSanId: _intTuJson(data['danh_muc_san_id'] ?? data['danhMucSanId']),
+      tenDanhMuc: '${data['ten_danh_muc'] ?? data['tenDanhMuc'] ?? ''}',
+      tenCoSo: '${data['ten_co_so'] ?? data['tenCoSo'] ?? ''}',
+      diaChi: '${data['dia_chi'] ?? data['diaChi'] ?? data['address'] ?? ''}',
+      danhMuc: '${data['danh_muc'] ?? data['ten_danh_muc'] ?? data['category'] ?? ''}',
+      hinhAnh: DuongDanApi.anh('$rawAnh'),
+      trangThai: _intTuJson(data['trang_thai'] ?? data['trangThai'] ?? 1),
+      gia: _doubleTuJson(data['gia'] ?? data['gia_hien_tai'] ?? data['price']),
+      giaThapNhat: _doubleTuJson(data['gia_thap_nhat'] ?? data['giaThapNhat'] ?? data['gia'] ?? data['price']),
+      viDo: _doubleTuJson(data['vi_do'] ?? data['viDo'] ?? data['lat'] ?? data['latitude']),
+      kinhDo: _doubleTuJson(data['kinh_do'] ?? data['kinhDo'] ?? data['lng'] ?? data['longitude']),
     );
   }
 
@@ -68,11 +94,13 @@ class San {
       'co_so_id': coSoId,
       'ten': ten,
       'ten_san': tenSan,
+      'danh_muc_san_id': danhMucSanId,
+      'ten_danh_muc': tenDanhMuc,
       'ten_co_so': tenCoSo,
       'dia_chi': diaChi,
       'danh_muc': danhMuc,
-      'trang_thai': trangThai,
       'hinh_anh': hinhAnh,
+      'trang_thai': trangThai,
       'gia': gia,
       'gia_thap_nhat': giaThapNhat,
       'vi_do': viDo,
@@ -91,41 +119,5 @@ class San {
         .whereType<Map>()
         .map((e) => San.fromJson(Map<String, dynamic>.from(e)))
         .toList();
-  }
-
-  static Map<String, dynamic> _unwrap(Map<String, dynamic> json) {
-    if (json['data'] is Map) return Map<String, dynamic>.from(json['data']);
-    if (json['san'] is Map) return Map<String, dynamic>.from(json['san']);
-    return json;
-  }
-
-  static String _chuanHoaAnh(dynamic value) {
-    dynamic anh = value;
-
-    if (anh is List && anh.isNotEmpty) {
-      final dauTien = anh.first;
-      if (dauTien is Map) {
-        anh = dauTien['url'] ?? dauTien['duong_dan'] ?? dauTien['image'] ?? '';
-      } else {
-        anh = dauTien;
-      }
-    }
-
-    final url = anh?.toString() ?? '';
-    return DuongDanApi.linkAnh(url);
-  }
-
-  static int? _toInt(dynamic value) {
-    if (value == null) return null;
-    if (value is int) return value;
-    if (value is double) return value.toInt();
-    return int.tryParse(value.toString());
-  }
-
-  static double? _toDouble(dynamic value) {
-    if (value == null) return null;
-    if (value is double) return value;
-    if (value is int) return value.toDouble();
-    return double.tryParse(value.toString());
   }
 }

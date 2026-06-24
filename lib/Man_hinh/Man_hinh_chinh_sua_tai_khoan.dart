@@ -31,10 +31,15 @@ class _ManHinhChinhSuaTaiKhoanState extends State<ManHinhChinhSuaTaiKhoan> {
   bool dangChonAnh = false;
 
   String chuyenGioiTinhHienThi(String gioiTinh) {
-    if (gioiTinh == '1') return 'Nam';
-    if (gioiTinh == '0') return 'Nữ';
-    if (gioiTinh == '2') return 'Khác';
-    if (gioiTinh == '3') return 'Khác';
+    final text = gioiTinh.trim().toLowerCase();
+
+    if (text == '1' || text == 'nam' || text == 'male') return 'Nam';
+    if (text == '0' || text == '2' || text == 'nữ' || text == 'nu' || text == 'female') {
+      return 'Nữ';
+    }
+    if (text == '3' || text == 'khác' || text == 'khac' || text == 'other') {
+      return 'Khác';
+    }
 
     return gioiTinh;
   }
@@ -194,7 +199,7 @@ class _ManHinhChinhSuaTaiKhoanState extends State<ManHinhChinhSuaTaiKhoan> {
       noiDung = iconAvatarMacDinh();
     } else if (avatar.startsWith('http://') || avatar.startsWith('https://')) {
       noiDung = Image.network(
-        avatar,
+        DuongDanApi.linkAnh(avatar),
         width: 96,
         height: 96,
         fit: BoxFit.cover,

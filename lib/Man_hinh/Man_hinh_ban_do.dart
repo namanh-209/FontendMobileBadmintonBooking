@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../Chung/Duong_dan_api.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
@@ -9,7 +11,6 @@ import '../Dung_lai/Thanh_duoi.dart';
 import '../Mau_du_lieu/Co_so.dart';
 import '../Xu_li/Xu_li_co_so.dart';
 import 'Man_hinh_chi_tiet_san.dart';
-import 'Man_hinh_xem_lich_dat_san.dart';
 
 class ManHinhBanDo extends StatefulWidget {
   const ManHinhBanDo({super.key});
@@ -432,7 +433,7 @@ class _ManHinhBanDoState extends State<ManHinhBanDo> {
     Navigator.push(
       context,
       HieuUngChuyenTrang(
-        manHinh: ManHinhXemLichSan(
+        manHinh: ManHinhChiTietSan(
           coSo: coSo,
         ),
       ),
@@ -887,7 +888,7 @@ class _ManHinhBanDoState extends State<ManHinhBanDo> {
               ),
               child: coSo.hinhAnh.isNotEmpty
                   ? Image.network(
-                      coSo.hinhAnh,
+                      DuongDanApi.linkAnh(coSo.hinhAnh),
                       width: 92,
                       height: 100,
                       fit: BoxFit.cover,

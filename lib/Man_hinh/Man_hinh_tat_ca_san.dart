@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../Chung/Duong_dan_api.dart';
 import 'package:provider/provider.dart';
 
 import '../Chung/Duong_dan_anh.dart';
@@ -379,7 +381,7 @@ class _ManHinhTatCaSanState extends State<ManHinhTatCaSan> {
                     ),
                     child: coSo.hinhAnh.isNotEmpty
                         ? Image.network(
-                            coSo.hinhAnh,
+                            DuongDanApi.linkAnh(coSo.hinhAnh),
                             width: 108,
                             height: 108,
                             fit: BoxFit.cover,

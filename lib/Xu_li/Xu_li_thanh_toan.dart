@@ -1,38 +1,38 @@
 import 'package:flutter/material.dart';
 
+import '../Mau_du_lieu/Dat_san.dart';
 import '../Xu_li_api/Thanh_toan_api.dart';
 
 class XuLiThanhToan extends ChangeNotifier {
+  final ThanhToanApi _api = ThanhToanApi();
+
   bool dangTai = false;
   String? thongBaoLoi;
-  String? paymentUrl;
-  Map<String, dynamic>? ketQuaThanhToan;
+  dynamic ketQuaThanhToan;
 
-  Future<String> taoUrlThanhToanVnpay({
-    required int datSanId,
-    String loaiThanhToan = 'deposit',
-  }) async {
+  Future<bool> taoThanhToanChuyenKhoan(DatSan datSan) async {
     dangTai = true;
     thongBaoLoi = null;
-    paymentUrl = null;
     notifyListeners();
 
     try {
-      final data = await ThanhToanApi().taoUrlVnpay(
-        datSanId: datSanId,
-        loaiThanhToan: loaiThanhToan,
+      final thongTin = _api.layThongTinChuyenKhoan(datSan);
+
+      ketQuaThanhToan = await _api.taoThanhToan(
+        datSanId: datSan.id,
+        soTien: thongTin.soTien,
+        loaiThanhToan: 1,
+        phuongThuc: 'CHUYEN_KHOAN',
       );
 
-      ketQuaThanhToan = data;
-      paymentUrl = (data['payment_url'] ?? '').toString();
       dangTai = false;
       notifyListeners();
-      return paymentUrl ?? '';
+      return true;
     } catch (e) {
-      thongBaoLoi = e.toString().replaceAll('Exception: ', '');
+      thongBaoLoi = '$e';
       dangTai = false;
       notifyListeners();
-      return '';
+      return false;
     }
   }
 }

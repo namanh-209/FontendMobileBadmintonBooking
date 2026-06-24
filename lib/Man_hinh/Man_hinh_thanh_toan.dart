@@ -1,728 +1,676 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../Mau_du_lieu/Co_so.dart';
-import 'Man_hinh_chon_voucher.dart';
+import '../Mau_du_lieu/Dat_san.dart';
+import '../Server/Goi_api.dart';
+import '../Xu_li/Xu_li_tai_khoan.dart';
+import '../Xu_li_api/Dat_san_api.dart';
+import '../Xu_li_api/Thanh_toan_api.dart';
+import 'Man_hinh_dang_nhap.dart';
+import 'Man_hinh_vnpay_webview.dart';
 
-String layUrlAnhSanThanhToan(String duongDanAnh) {
-  final path = duongDanAnh.trim();
+class ManHinhThanhToan extends StatefulWidget {
+  final DatSan? datSan;
+  final CoSo? coSo;
+  final List<Map<String, dynamic>>? chiTiet;
+  final String ghiChu;
 
-  if (path.isEmpty) return '';
-
-  if (path.startsWith('http://') || path.startsWith('https://')) {
-    return path;
-  }
-
-  if (path.startsWith('/')) {
-    return 'http://10.0.2.2:3000$path';
-  }
-
-  return 'http://10.0.2.2:3000/$path';
-}
-
-String dinhDangTienThanhToan(double gia) {
-  final soTien = gia.round().toString();
-  final ketQua = soTien.replaceAllMapped(
-    RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-    (match) => '${match[1]}.',
-  );
-  return '${ketQua}đ';
-}
-
-String layTenCoSoThanhToan(CoSo coSo) {
-  if (coSo.tenCoSo.trim().isNotEmpty) return coSo.tenCoSo.trim();
-  if (coSo.ten.trim().isNotEmpty) return coSo.ten.trim();
-  return 'Sân cầu lông của NA';
-}
-
-String layDiaChiCoSoThanhToan(CoSo coSo) {
-  if (coSo.diaChi.trim().isNotEmpty) return coSo.diaChi.trim();
-  return 'Bình Tân, TP Hồ Chí Minh';
-}
-
-class ManHinhThanhToanDemo extends StatefulWidget {
-  final CoSo coSo;
-  final String ngayChoi;
-  final String khungGio;
-  final String sanDaChon;
-  final int soO;
-  final double tongTien;
-  final double giaTheoGio;
-
-  const ManHinhThanhToanDemo({
+  const ManHinhThanhToan({
     super.key,
-    required this.coSo,
-    required this.ngayChoi,
-    required this.khungGio,
-    required this.sanDaChon,
-    required this.soO,
-    required this.tongTien,
-    required this.giaTheoGio,
+    this.datSan,
+    this.coSo,
+    this.chiTiet,
+    this.ghiChu = '',
   });
 
   @override
-  State<ManHinhThanhToanDemo> createState() => _ManHinhThanhToanDemoState();
+  State<ManHinhThanhToan> createState() => _ManHinhThanhToanState();
 }
 
-class _ManHinhThanhToanDemoState extends State<ManHinhThanhToanDemo> {
-  final TextEditingController tenController = TextEditingController(text: 'Nguyễn Văn A');
-  final TextEditingController sdtController = TextEditingController(text: '0912345678');
+class _ManHinhThanhToanState extends State<ManHinhThanhToan> {
+  final DatSanApi datSanApi = DatSanApi();
+  final ThanhToanApi thanhToanApi = ThanhToanApi();
+  final TextEditingController ghiChuController = TextEditingController();
 
-  String phuongThuc = 'VNPAY';
-  VoucherDemo? voucherDangChon;
-  bool dangThanhToan = false;
+  DatSan? datSan;
 
-  final List<VoucherDemo> vouchers = const [
-    VoucherDemo(
-      ma: 'NEW30',
-      tieuDe: 'Giảm 30.000đ',
-      moTa: 'Đơn tối thiểu 200.000đ',
-      giamTien: 30000,
-      mauChinh: Color(0xff8b5cf6),
-      mauNen: Color(0xfff3edff),
-    ),
-    VoucherDemo(
-      ma: 'NA50K',
-      tieuDe: 'Giảm 50.000đ',
-      moTa: 'Đơn tối thiểu 300.000đ',
-      giamTien: 50000,
-      mauChinh: Color(0xff3b82f6),
-      mauNen: Color(0xffe8f1ff),
-    ),
-    VoucherDemo(
-      ma: 'ABC10',
-      tieuDe: 'Giảm 10%',
-      moTa: 'Tối đa 30.000đ',
-      giamTien: 0,
-      phanTram: 0.1,
-      giamToiDa: 30000,
-      mauChinh: Color(0xff8b5cf6),
-      mauNen: Color(0xfff7f0ff),
-    ),
-  ];
+  bool dangTai = false;
+  bool dangGuiThanhToan = false;
+  bool dangHuy = false;
+
+  String? loi;
+  String loaiThanhToan = 'deposit';
+
+  @override
+  void initState() {
+    super.initState();
+    datSan = widget.datSan;
+    ghiChuController.text = widget.ghiChu;
+    Future.microtask(chuanBiThanhToan);
+  }
 
   @override
   void dispose() {
-    tenController.dispose();
-    sdtController.dispose();
+    ghiChuController.dispose();
     super.dispose();
   }
 
-  double get tienGiam {
-    final voucher = voucherDangChon;
-    if (voucher == null) return 0;
-    return voucher.tinhGiam(widget.tongTien);
-  }
+  Future<void> chuanBiThanhToan() async {
+    final taiKhoan = context.read<XuLiTaiKhoan>();
 
-  double get thanhTien {
-    final conLai = widget.tongTien - tienGiam;
-    return conLai < 0 ? 0 : conLai;
-  }
+    if (!taiKhoan.daDangNhap) {
+      setState(() {
+        loi = 'Bạn phải đăng nhập trước khi đặt sân';
+      });
+      return;
+    }
 
-  void chonVoucher() async {
-    final voucher = await Navigator.push<VoucherDemo>(
-      context,
-      MaterialPageRoute(
-        fullscreenDialog: true,
-        builder: (_) => ManHinhChonVoucherDemo(
-          vouchers: vouchers,
-          voucherDangChon: voucherDangChon,
-          tongTien: widget.tongTien,
-        ),
-      ),
-    );
+    final token = await taiKhoan.layTokenDangNhap();
+    GoiApi.ganToken(token);
 
-    if (voucher == null) return;
+    if (datSan != null) return;
 
-    setState(() {
-      voucherDangChon = voucher;
-    });
-  }
-
-  void thanhToan() async {
-    if (tenController.text.trim().isEmpty || sdtController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Nhập đủ thông tin liên hệ')),
-      );
+    if (widget.coSo == null ||
+        widget.chiTiet == null ||
+        widget.chiTiet!.isEmpty) {
+      setState(() {
+        loi = 'Thiếu thông tin đặt sân';
+      });
       return;
     }
 
     setState(() {
-      dangThanhToan = true;
+      dangTai = true;
+      loi = null;
     });
 
-    await Future.delayed(const Duration(milliseconds: 700));
+    try {
+      final ketQua = await datSanApi.taoDatSan(
+        coSoId: widget.coSo!.id,
+        chiTiet: widget.chiTiet!,
+        ghiChu: ghiChuController.text.trim(),
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        datSan = ketQua;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        loi = '$e';
+      });
+    }
 
     if (!mounted) return;
 
     setState(() {
-      dangThanhToan = false;
+      dangTai = false;
     });
+  }
 
-    Navigator.pushReplacement(
+  String dinhDangTien(double value) {
+    return '${value.toStringAsFixed(0).replaceAllMapped(
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (Match m) => '${m[1]}.',
+        )}đ';
+  }
+
+  String dinhDangThoiGian(DateTime? value) {
+    if (value == null) return 'Không có';
+
+    final ngay = value.day.toString().padLeft(2, '0');
+    final thang = value.month.toString().padLeft(2, '0');
+    final gio = value.hour.toString().padLeft(2, '0');
+    final phut = value.minute.toString().padLeft(2, '0');
+
+    return '$ngay/$thang/${value.year} $gio:$phut';
+  }
+
+  double tongTien(DatSan ds) {
+    if (ds.thanhTien > 0) return ds.thanhTien;
+    if (ds.tongTien > 0) return ds.tongTien;
+
+    return ds.chiTiet.fold(
+      0,
+      (sum, item) => sum + item.gia,
+    );
+  }
+
+  double tienCoc(DatSan ds) {
+    if (ds.tienCoc > 0) return ds.tienCoc;
+
+    final phanTramCoc = widget.coSo?.phanTramCoc ?? 30;
+    return (tongTien(ds) * phanTramCoc / 100).roundToDouble();
+  }
+
+  double tienCanThanhToan(DatSan ds) {
+    if (loaiThanhToan == 'full') return tongTien(ds);
+    return tienCoc(ds);
+  }
+
+  double tienConLai(DatSan ds) {
+    final value = tongTien(ds) - tienCanThanhToan(ds);
+    return value < 0 ? 0 : value;
+  }
+
+  Future<void> moManHinhVnpay(String paymentUrl) async {
+    final ketQua = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
-        builder: (_) => ManHinhDatSanThanhCong(
-          tenCoSo: layTenCoSoThanhToan(widget.coSo),
-          ngayChoi: widget.ngayChoi,
-          khungGio: widget.khungGio,
-          sanDaChon: widget.sanDaChon,
-          thoiLuong: '${widget.soO * 30} phút',
-          maGiamGia: voucherDangChon?.ma ?? 'Không có',
-          tongTien: thanhTien,
-          phuongThuc: phuongThuc,
+        builder: (_) => ManHinhVnpayWebView(
+          paymentUrl: paymentUrl,
         ),
       ),
     );
-  }
 
-  Widget nenTrang({required Widget child}) {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Color(0xffd9ecff),
-            Color(0xfff9fcff),
-            Color(0xffdff2ff),
-          ],
+    if (!mounted) return;
+
+    if (ketQua == true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Thanh toán thành công'),
         ),
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            top: -40,
-            left: -40,
-            child: Container(
-              width: 170,
-              height: 170,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xff60a5fa).withOpacity(0.13),
-              ),
-            ),
-          ),
-          Positioned(
-            top: 40,
-            right: 16,
-            child: Transform.rotate(
-              angle: -0.45,
-              child: Icon(
-                Icons.sports_tennis_rounded,
-                size: 68,
-                color: Colors.white.withOpacity(0.78),
-              ),
-            ),
-          ),
-          child,
-        ],
-      ),
-    );
+      );
+
+      Navigator.pop(context, true);
+    } else if (ketQua == false) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Bạn đã rời màn thanh toán'),
+        ),
+      );
+    }
   }
 
-  Widget dauTrang() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 4, 18, 4),
-      child: Row(
-        children: [
-          InkWell(
-            onTap: () => Navigator.pop(context),
-            borderRadius: BorderRadius.circular(30),
-            child: const SizedBox(
-              width: 40,
-              height: 40,
-              child: Icon(Icons.arrow_back_ios_new_rounded, size: 22, color: Colors.black),
-            ),
-          ),
-          const Expanded(
-            child: Text(
-              'Thanh toán',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.black,
-                fontSize: 28,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ),
-          const SizedBox(width: 40),
-        ],
-      ),
-    );
+  Future<void> taoThanhToanVnpay() async {
+    final ds = datSan;
+
+    if (ds == null) return;
+
+    setState(() {
+      dangGuiThanhToan = true;
+    });
+
+    try {
+      final paymentUrl = await thanhToanApi.taoLinkThanhToanVnpay(
+        datSanId: ds.id,
+        loaiThanhToan: loaiThanhToan,
+      );
+
+      if (!mounted) return;
+
+      await moManHinhVnpay(paymentUrl);
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$e'),
+        ),
+      );
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      dangGuiThanhToan = false;
+    });
   }
 
-  Widget anhCoSo() {
-    final url = layUrlAnhSanThanhToan(widget.coSo.hinhAnh);
+  Future<void> huyGiuChoVaQuayLai() async {
+    final ds = datSan;
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(6),
-      child: url.isEmpty
-          ? Container(
-              color: const Color(0xffdbeafe),
-              child: const Icon(Icons.sports_tennis_rounded, color: Color(0xff2454ff)),
-            )
-          : Image.network(
-              url,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  color: const Color(0xffdbeafe),
-                  child: const Icon(Icons.sports_tennis_rounded, color: Color(0xff2454ff)),
-                );
-              },
-            ),
-    );
+    if (ds == null) {
+      Navigator.pop(context);
+      return;
+    }
+
+    setState(() {
+      dangHuy = true;
+    });
+
+    try {
+      if (ds.coTheHuyGiuCho) {
+        await datSanApi.huyGiuCho(ds.id);
+      }
+
+      if (!mounted) return;
+
+      Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$e'),
+        ),
+      );
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      dangHuy = false;
+    });
   }
 
-  Widget cardSanDauTrang() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(26, 8, 26, 8),
-      child: Row(
-        children: [
-          SizedBox(width: 105, height: 82, child: anhCoSo()),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  layTenCoSoThanhToan(widget.coSo),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.black,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Row(
-                  children: [
-                    Icon(Icons.star_rounded, color: Color(0xff2454ff), size: 14),
-                    SizedBox(width: 4),
-                    Text(
-                      '4,9 (297 đánh giá)',
-                      style: TextStyle(color: Color(0xff64748b), fontSize: 9.5, fontWeight: FontWeight.w600),
-                    ),
-                    SizedBox(width: 12),
-                    Text(
-                      '1,2 Km',
-                      style: TextStyle(color: Color(0xff64748b), fontSize: 9.5, fontWeight: FontWeight.w600),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 7),
-                Row(
-                  children: [
-                    const Icon(Icons.location_on_rounded, color: Color(0xff64748b), size: 14),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        layDiaChiCoSoThanhToan(widget.coSo),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: Color(0xff64748b), fontSize: 9.5, fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget dongThongTin({
+  Widget theTrang({
+    required String tieuDe,
     required IconData icon,
-    required String label,
-    required String value,
-    bool pill = false,
+    required List<Widget> children,
   }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Icon(icon, color: Colors.black, size: 18),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Text(
-                  label,
-                  style: const TextStyle(color: Colors.black, fontSize: 12, fontWeight: FontWeight.w700),
-                ),
-              ),
-              pill
-                  ? Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: const Color(0xff2454ff),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.check_circle_rounded, color: Colors.white, size: 12),
-                          const SizedBox(width: 4),
-                          Text(
-                            value,
-                            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800),
-                          ),
-                        ],
-                      ),
-                    )
-                  : Text(
-                      value,
-                      textAlign: TextAlign.right,
-                      style: const TextStyle(color: Color(0xff2454ff), fontSize: 12, fontWeight: FontWeight.w800),
-                    ),
-            ],
-          ),
-          const SizedBox(height: 7),
-          Container(height: 1, color: Colors.black.withOpacity(0.42)),
-        ],
-      ),
-    );
-  }
-
-  Widget oLienHe({required TextEditingController controller, required IconData icon}) {
     return Container(
-      height: 36,
-      margin: const EdgeInsets.only(left: 22, right: 22, bottom: 8),
+      width: double.infinity,
+      padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.black, width: 1.2),
-      ),
-      child: TextField(
-        controller: controller,
-        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
-        decoration: InputDecoration(
-          prefixIcon: Icon(icon, size: 18, color: Colors.black),
-          prefixIconConstraints: const BoxConstraints(minWidth: 38),
-          border: InputBorder.none,
-          isDense: true,
-          contentPadding: const EdgeInsets.only(top: 10),
-        ),
-      ),
-    );
-  }
-
-  Widget cardThongTinDatSan() {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(26, 8, 26, 0),
-      padding: const EdgeInsets.fromLTRB(18, 12, 18, 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: [
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: const [
           BoxShadow(
-            color: Colors.black.withOpacity(0.16),
-            blurRadius: 9,
-            offset: const Offset(1, 4),
+            color: Colors.black12,
+            blurRadius: 8,
+            offset: Offset(1, 3),
           ),
-        ],
-      ),
-      child: Column(
-        children: [
-          dongThongTin(icon: Icons.calendar_month_rounded, label: 'Ngày chơi', value: widget.ngayChoi),
-          dongThongTin(icon: Icons.access_time_rounded, label: 'Khung giờ', value: widget.khungGio),
-          dongThongTin(icon: Icons.stadium_rounded, label: 'Chọn sân', value: widget.sanDaChon, pill: true),
-          dongThongTin(icon: Icons.timer_outlined, label: 'Thời lượng', value: '${widget.soO * 30} phút', pill: true),
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 7),
-            child: Row(
-              children: [
-                Icon(Icons.person_outline_rounded, color: Colors.black, size: 19),
-                SizedBox(width: 14),
-                Expanded(
-                  child: Text(
-                    'Thông tin liên hệ',
-                    style: TextStyle(color: Colors.black, fontSize: 12, fontWeight: FontWeight.w700),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          oLienHe(controller: tenController, icon: Icons.person_outline_rounded),
-          oLienHe(controller: sdtController, icon: Icons.phone_outlined),
-        ],
-      ),
-    );
-  }
-
-  Widget itemPhuongThuc({required String value, required IconData icon, required String title}) {
-    final dangChon = phuongThuc == value;
-
-    return InkWell(
-      onTap: () {
-        setState(() {
-          phuongThuc = value;
-        });
-      },
-      child: Container(
-        height: 34,
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border(
-            bottom: BorderSide(
-              color: Colors.black.withOpacity(0.35),
-              width: value == 'NGAN_HANG' ? 0 : 1,
-            ),
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(dangChon ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded, color: const Color(0xff2454ff), size: 18),
-            const SizedBox(width: 22),
-            Icon(icon, color: Colors.black, size: 18),
-            const SizedBox(width: 9),
-            Text(
-              title,
-              style: TextStyle(color: dangChon ? const Color(0xff2454ff) : Colors.black, fontSize: 12, fontWeight: FontWeight.w700),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget cardPhuongThuc() {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(26, 10, 26, 0),
-      padding: const EdgeInsets.fromLTRB(18, 10, 18, 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.14), blurRadius: 8, offset: const Offset(1, 3)),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Phương thức thanh toán', style: TextStyle(color: Colors.black, fontSize: 12, fontWeight: FontWeight.w900)),
-          const SizedBox(height: 8),
-          Container(
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.black.withOpacity(0.45), width: 1),
-              borderRadius: BorderRadius.circular(3),
-            ),
-            child: Column(
-              children: [
-                itemPhuongThuc(value: 'VNPAY', icon: Icons.account_balance_wallet_outlined, title: 'Ví điện tử'),
-                itemPhuongThuc(value: 'NGAN_HANG', icon: Icons.credit_card_rounded, title: 'Ngân hàng'),
-              ],
-            ),
+          Row(
+            children: [
+              Icon(
+                icon,
+                size: 19,
+                color: const Color(0xff2454ff),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                tieuDe,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.black,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Demo giao diện, chưa thanh toán thật.',
-            style: TextStyle(color: Colors.grey.shade600, fontSize: 10.5, fontWeight: FontWeight.w600),
-          ),
+          const SizedBox(height: 12),
+          ...children,
         ],
       ),
     );
   }
 
-  Widget cardVoucher() {
-    return InkWell(
-      onTap: chonVoucher,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        margin: const EdgeInsets.fromLTRB(26, 14, 26, 0),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.14), blurRadius: 8, offset: const Offset(1, 3)),
-          ],
-        ),
-        child: Row(
-          children: [
-            const Icon(Icons.confirmation_number_outlined, color: Colors.black, size: 28),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Voucher/Mã giảm giá', style: TextStyle(color: Colors.black, fontSize: 12, fontWeight: FontWeight.w900)),
-                  const SizedBox(height: 3),
-                  Text(
-                    voucherDangChon == null ? 'Chọn hoặc nhập mã giảm giá' : 'Đã chọn mã ${voucherDangChon!.ma}',
-                    style: TextStyle(color: voucherDangChon == null ? Colors.grey.shade500 : const Color(0xff16a34a), fontSize: 10.5, fontWeight: FontWeight.w600),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(Icons.chevron_right_rounded, color: Colors.black, size: 24),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget dongTongKet(String label, String value, {Color? mau, bool bold = false}) {
+  Widget dongThongTin(String trai, String phai) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
+          SizedBox(
+            width: 112,
             child: Text(
-              label,
-              style: TextStyle(color: Colors.black, fontSize: bold ? 13 : 12, fontWeight: bold ? FontWeight.w900 : FontWeight.w700),
+              trai,
+              style: TextStyle(
+                color: Colors.grey.shade700,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
-          Text(
-            value,
-            style: TextStyle(color: mau ?? Colors.black, fontSize: bold ? 14 : 12, fontWeight: bold ? FontWeight.w900 : FontWeight.w700),
+          Expanded(
+            child: Text(
+              phai,
+              textAlign: TextAlign.right,
+              style: const TextStyle(
+                color: Colors.black,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget cardTongTien() {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(26, 16, 26, 0),
-      padding: const EdgeInsets.fromLTRB(18, 14, 18, 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.14), blurRadius: 8, offset: const Offset(1, 3)),
-        ],
-      ),
+  Widget chiTietLich(DatSan ds) {
+    if (ds.chiTiet.isEmpty) {
+      return const Text(
+        'Không có chi tiết khung giờ',
+        style: TextStyle(
+          color: Colors.black54,
+          fontWeight: FontWeight.w600,
+        ),
+      );
+    }
+
+    return Column(
+      children: ds.chiTiet.map((item) {
+        final tenSan = item.tenSan.isEmpty ? 'Sân ${item.sanId}' : item.tenSan;
+        final gio = '${item.gioBatDau} - ${item.gioKetThuc}';
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: const Color(0xfff8fafc),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.sports_tennis_rounded,
+                size: 17,
+                color: Color(0xff2454ff),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      tenSan,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      gio,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey.shade700,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                dinhDangTien(item.gia),
+                style: const TextStyle(
+                  color: Color(0xff2454ff),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget chonLoaiThanhToan(DatSan ds) {
+    Widget luaChon({
+      required String value,
+      required String tieuDe,
+      required String tien,
+    }) {
+      final dangChon = loaiThanhToan == value;
+
+      return InkWell(
+        onTap: () {
+          setState(() {
+            loaiThanhToan = value;
+          });
+        },
+        borderRadius: BorderRadius.circular(13),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: dangChon ? const Color(0xffeef4ff) : Colors.white,
+            borderRadius: BorderRadius.circular(13),
+            border: Border.all(
+              color: dangChon
+                  ? const Color(0xff2454ff)
+                  : const Color(0xffe2e8f0),
+              width: dangChon ? 1.4 : 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      tieuDe,
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      tien,
+                      style: const TextStyle(
+                        color: Color(0xff2454ff),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                dangChon ? Icons.radio_button_checked : Icons.radio_button_off,
+                color: const Color(0xff2454ff),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      children: [
+        luaChon(
+          value: 'deposit',
+          tieuDe: 'Thanh toán tiền cọc',
+          tien: dinhDangTien(tienCoc(ds)),
+        ),
+        const SizedBox(height: 10),
+        luaChon(
+          value: 'full',
+          tieuDe: 'Thanh toán toàn bộ',
+          tien: dinhDangTien(tongTien(ds)),
+        ),
+      ],
+    );
+  }
+
+  Widget noiDung(DatSan ds) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
       child: Column(
         children: [
-          dongTongKet('Thời lượng', '${widget.soO * 30} phút'),
-          dongTongKet('Giá sân', '${dinhDangTienThanhToan(widget.giaTheoGio)}/giờ'),
-          dongTongKet('Giảm giá', '-${dinhDangTienThanhToan(tienGiam)}', mau: const Color(0xff16a34a)),
-          const SizedBox(height: 4),
-          Container(height: 1, color: Colors.black.withOpacity(0.5)),
-          dongTongKet('Tổng tiền', dinhDangTienThanhToan(thanhTien), mau: const Color(0xff2454ff), bold: true),
-        ],
-      ),
-    );
-  }
-
-  Widget nutThanhToan() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(26, 16, 26, 30),
-      child: SizedBox(
-        width: double.infinity,
-        height: 44,
-        child: ElevatedButton(
-          onPressed: dangThanhToan ? null : thanhToan,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xff2454ff),
-            disabledBackgroundColor: const Color(0xff93c5fd),
-            foregroundColor: Colors.white,
-            elevation: 0,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+          theTrang(
+            tieuDe: 'Thông tin giữ chỗ',
+            icon: Icons.receipt_long_rounded,
+            children: [
+              dongThongTin('Mã đặt sân', '#${ds.id}'),
+              dongThongTin(
+                'Cơ sở',
+                ds.tenCoSo.isEmpty
+                    ? (widget.coSo?.tenCoSo ?? 'Sân cầu lông')
+                    : ds.tenCoSo,
+              ),
+              dongThongTin('Trạng thái', ds.tenTrangThai),
+              dongThongTin('Hết hạn', dinhDangThoiGian(ds.thoiGianHetHan)),
+            ],
           ),
-          child: dangThanhToan
-              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.4))
-              : const Text('Thanh toán', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w800)),
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xffeaf6ff),
-      body: nenTrang(
-        child: SafeArea(
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                dauTrang(),
-                cardSanDauTrang(),
-                cardThongTinDatSan(),
-                cardPhuongThuc(),
-                cardVoucher(),
-                cardTongTien(),
-                nutThanhToan(),
-              ],
-            ),
+          const SizedBox(height: 13),
+          theTrang(
+            tieuDe: 'Chi tiết lịch đặt',
+            icon: Icons.calendar_month_rounded,
+            children: [
+              chiTietLich(ds),
+              const Divider(height: 22),
+              dongThongTin('Tổng tiền', dinhDangTien(tongTien(ds))),
+              if (ds.tienGiam > 0)
+                dongThongTin(
+                  'Khuyến mãi',
+                  '-${dinhDangTien(ds.tienGiam)}',
+                ),
+              dongThongTin('Thành tiền', dinhDangTien(tongTien(ds))),
+            ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class ManHinhDatSanThanhCong extends StatelessWidget {
-  final String tenCoSo;
-  final String ngayChoi;
-  final String khungGio;
-  final String sanDaChon;
-  final String thoiLuong;
-  final String maGiamGia;
-  final double tongTien;
-  final String phuongThuc;
-
-  const ManHinhDatSanThanhCong({
-    super.key,
-    required this.tenCoSo,
-    required this.ngayChoi,
-    required this.khungGio,
-    required this.sanDaChon,
-    required this.thoiLuong,
-    required this.maGiamGia,
-    required this.tongTien,
-    required this.phuongThuc,
-  });
-
-  Widget dongThongTin({required IconData icon, required String label, required String value, Color? mauChu}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
-          Icon(icon, color: const Color(0xff2454ff), size: 21),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(label, style: const TextStyle(color: Colors.black87, fontSize: 12, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 13),
+          theTrang(
+            tieuDe: 'Ghi chú',
+            icon: Icons.note_alt_outlined,
+            children: [
+              TextField(
+                controller: ghiChuController,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  hintText: 'Ghi chú cho cơ sở nếu có',
+                  filled: true,
+                  fillColor: const Color(0xfff8fafc),
+                  contentPadding: const EdgeInsets.all(12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+            ],
           ),
-          Flexible(
-            child: Text(
-              value,
-              textAlign: TextAlign.right,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: mauChu ?? const Color(0xff2454ff), fontSize: 12, fontWeight: FontWeight.w800),
-            ),
+          const SizedBox(height: 13),
+          theTrang(
+            tieuDe: 'Phương thức thanh toán',
+            icon: Icons.account_balance_wallet_rounded,
+            children: [
+              chonLoaiThanhToan(ds),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xfff8fafc),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  children: [
+                    dongThongTin(
+                      'Cần thanh toán',
+                      dinhDangTien(tienCanThanhToan(ds)),
+                    ),
+                    dongThongTin(
+                      'Còn lại',
+                      dinhDangTien(tienConLai(ds)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  Widget nut({required String text, required IconData icon, required bool filled, required VoidCallback onTap}) {
-    return SizedBox(
-      width: double.infinity,
-      height: 48,
-      child: ElevatedButton(
-        onPressed: onTap,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: filled ? const Color(0xff2454ff) : Colors.white,
-          foregroundColor: filled ? Colors.white : const Color(0xff2454ff),
-          elevation: 0,
-          side: filled ? BorderSide.none : const BorderSide(color: Color(0xff2454ff), width: 1.2),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+  Widget thanhDuoi(DatSan ds) {
+    return SafeArea(
+      top: false,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          border: Border(
+            top: BorderSide(
+              color: Color(0xffe2e8f0),
+            ),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black12,
+              blurRadius: 14,
+              offset: Offset(0, -5),
+            ),
+          ],
         ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 20),
+            SizedBox(
+              width: 88,
+              height: 45,
+              child: OutlinedButton(
+                onPressed:
+                    dangHuy || dangGuiThanhToan ? null : huyGiuChoVaQuayLai,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.black87,
+                  side: const BorderSide(
+                    color: Color(0xffcbd5e1),
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: dangHuy
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Text(
+                        'Hủy',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+              ),
+            ),
             const SizedBox(width: 10),
-            Text(text, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900)),
+            Expanded(
+              child: SizedBox(
+                height: 45,
+                child: ElevatedButton.icon(
+                  onPressed:
+                      dangGuiThanhToan || dangHuy ? null : taoThanhToanVnpay,
+                  icon: dangGuiThanhToan
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(
+                          Icons.credit_card_rounded,
+                          size: 18,
+                        ),
+                  label: Text(
+                    dangGuiThanhToan
+                        ? 'Đang mở VNPay'
+                        : loaiThanhToan == 'full'
+                            ? 'Thanh toán toàn bộ'
+                            : 'Thanh toán cọc',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xff2454ff),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -731,101 +679,90 @@ class ManHinhDatSanThanhCong extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final daDangNhap = context.watch<XuLiTaiKhoan>().daDangNhap;
+    final ds = datSan;
+
     return Scaffold(
-      backgroundColor: const Color(0xffeaf6ff),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xffd9ecff), Color(0xfff9fcff), Color(0xffdff2ff)],
+      backgroundColor: const Color(0xfff5f9ff),
+      appBar: AppBar(
+        title: const Text(
+          'Xác nhận đặt sân',
+          style: TextStyle(
+            fontWeight: FontWeight.w900,
           ),
         ),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    InkWell(
-                      onTap: () => Navigator.pop(context),
-                      borderRadius: BorderRadius.circular(30),
-                      child: const SizedBox(
-                        width: 40,
-                        height: 40,
-                        child: Icon(Icons.arrow_back_ios_new_rounded, color: Colors.black),
-                      ),
-                    ),
-                    const Expanded(
-                      child: Text(
-                        'Đặt sân thành công',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.black, fontSize: 17, fontWeight: FontWeight.w900),
-                      ),
-                    ),
-                    const SizedBox(width: 40),
-                  ],
-                ),
-                const SizedBox(height: 38),
-                Container(
-                  width: 92,
-                  height: 92,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 12, offset: const Offset(0, 5)),
-                    ],
-                  ),
-                  child: const Icon(Icons.check_rounded, color: Color(0xff22c55e), size: 58),
-                ),
-                const SizedBox(height: 22),
-                const Text(
-                  'Đặt sân thành công!',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Color(0xff2454ff), fontSize: 22, fontWeight: FontWeight.w900),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Bạn đã đặt sân thành công, chúc bạn có buổi chơi thật vui.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey.shade700, fontSize: 13, height: 1.35, fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 24),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(14),
-                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.10), blurRadius: 10, offset: const Offset(1, 4))],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Thông tin đặt sân', style: TextStyle(color: Colors.black87, fontSize: 15, fontWeight: FontWeight.w900)),
-                      const SizedBox(height: 10),
-                      dongThongTin(icon: Icons.home_work_rounded, label: 'Tên sân', value: tenCoSo, mauChu: Colors.black87),
-                      dongThongTin(icon: Icons.calendar_month_rounded, label: 'Ngày chơi', value: ngayChoi),
-                      dongThongTin(icon: Icons.access_time_rounded, label: 'Khung giờ', value: khungGio),
-                      dongThongTin(icon: Icons.stadium_rounded, label: 'Sân', value: sanDaChon),
-                      dongThongTin(icon: Icons.timer_outlined, label: 'Thời lượng', value: thoiLuong),
-                      dongThongTin(icon: Icons.confirmation_number_outlined, label: 'Mã giảm giá', value: maGiamGia),
-                      dongThongTin(icon: Icons.wallet_rounded, label: 'Thanh toán', value: phuongThuc == 'VNPAY' ? 'Ví điện tử' : 'Ngân hàng', mauChu: const Color(0xff16a34a)),
-                      dongThongTin(icon: Icons.paid_rounded, label: 'Tổng tiền', value: dinhDangTienThanhToan(tongTien)),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 22),
-                nut(text: 'Xem lịch đã đặt', icon: Icons.calendar_month_rounded, filled: true, onTap: () => Navigator.pop(context)),
-                const SizedBox(height: 12),
-                nut(text: 'Về trang chủ', icon: Icons.home_rounded, filled: false, onTap: () => Navigator.popUntil(context, (route) => route.isFirst)),
-              ],
-            ),
+        backgroundColor: const Color(0xfff5f9ff),
+        foregroundColor: Colors.black,
+        elevation: 0,
+        leading: IconButton(
+          onPressed:
+              dangGuiThanhToan || dangHuy ? null : huyGiuChoVaQuayLai,
+          icon: const Icon(
+            Icons.chevron_left_rounded,
           ),
         ),
       ),
+      body: !daDangNhap
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.lock_outline,
+                      size: 54,
+                      color: Color(0xff2454ff),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Bạn cần đăng nhập để thanh toán giữ chỗ',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const ManHinhDangNhap(),
+                          ),
+                        );
+                      },
+                      child: const Text('Đăng nhập'),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          : dangTai
+              ? const Center(
+                  child: CircularProgressIndicator(),
+                )
+              : loi != null
+                  ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Text(
+                          loi!,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Colors.black87,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    )
+                  : ds == null
+                      ? const Center(
+                          child: Text('Không có dữ liệu đặt sân'),
+                        )
+                      : noiDung(ds),
+      bottomNavigationBar: daDangNhap && ds != null ? thanhDuoi(ds) : null,
     );
   }
 }

@@ -79,7 +79,16 @@ class NguoiDung {
               '')
           .toString(),
       avatar: _chuanHoaAvatar(
-        user['avatar'] ?? user['anh_dai_dien'] ?? user['hinh_anh'] ?? user['image'] ?? '',
+        user['avatar'] ??
+            user['avatar_url'] ??
+            user['anh_dai_dien'] ??
+            user['anhDaiDien'] ??
+            user['hinh_anh'] ??
+            user['hinhAnh'] ??
+            user['image'] ??
+            user['photo'] ??
+            user['url'] ??
+            '',
       ),
       isAdmin: _toInt(user['is_admin'] ?? user['isAdmin'] ?? user['vai_tro_id'] ?? user['role'] ?? 0) ?? 0,
     );
@@ -132,11 +141,7 @@ class NguoiDung {
   static String _chuanHoaAvatar(dynamic value) {
     final text = value?.toString().trim() ?? '';
     if (text.isEmpty) return '';
-    if (text.startsWith('http://') || text.startsWith('https://')) return text;
-    if (text.startsWith('/uploads/') || text.startsWith('uploads/')) {
-      return DuongDanApi.linkAnh(text);
-    }
-    return text;
+    return DuongDanApi.linkAnh(text);
   }
 
   static int? _toInt(dynamic value) {

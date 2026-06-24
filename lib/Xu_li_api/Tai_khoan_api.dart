@@ -5,6 +5,8 @@ import '../Mau_du_lieu/Nguoi_dung.dart';
 import '../Server/Goi_api.dart';
 
 class TaiKhoanApi {
+  final GoiApi _api = GoiApi();
+
   Map<String, dynamic> _asMap(dynamic data) {
     if (data is Map<String, dynamic>) return data;
     if (data is Map) return Map<String, dynamic>.from(data);
@@ -13,7 +15,7 @@ class TaiKhoanApi {
 
   Map<String, dynamic> _chuanHoaKetQua(dynamic data) {
     final map = _asMap(data);
-    final user = map['user'] ?? map['data'] ?? map['nguoiDung'];
+    final user = map['user'] ?? map['data'] ?? map['nguoiDung'] ?? map['nguoi_dung'];
 
     if (user is Map && map['user'] == null) {
       return {
@@ -23,6 +25,29 @@ class TaiKhoanApi {
     }
 
     return map;
+  }
+
+  String _gioiTinhGiongWeb(dynamic value) {
+    final text = value?.toString().trim().toLowerCase() ?? '';
+
+    if (text.isEmpty) return 'male';
+    if (text == 'nam' || text == 'male' || text == '1') return 'male';
+    if (text == 'nữ' || text == 'nu' || text == 'female' || text == '0' || text == '2') {
+      return 'female';
+    }
+    if (text == 'khác' || text == 'khac' || text == 'other' || text == '3') {
+      return 'other';
+    }
+
+    return text;
+  }
+
+  bool _laLinkOnline(String value) {
+    return value.startsWith('http://') ||
+        value.startsWith('https://') ||
+        value.startsWith('/uploads/') ||
+        value.startsWith('uploads/') ||
+        value.startsWith('res.cloudinary.com/');
   }
 
   Future<Map<String, dynamic>> dangKy({
@@ -37,9 +62,9 @@ class TaiKhoanApi {
     final ten = hoTen ?? username ?? '';
     final mk = matKhau ?? password ?? '';
 
-    final data = await GoiApi.post(
+    final data = await _api.post(
       DuongDanApi.dangKy,
-      {
+      body: {
         'ho_ten': ten,
         'email': email,
         'mat_khau': mk,
@@ -61,9 +86,9 @@ class TaiKhoanApi {
     final tk = taiKhoan ?? emailHoacUsername ?? email ?? username ?? '';
     final mk = matKhau ?? password ?? '';
 
-    final data = await GoiApi.post(
+    final data = await _api.post(
       DuongDanApi.dangNhap,
-      {
+      body: {
         'tai_khoan': tk,
         'mat_khau': mk,
       },
@@ -82,11 +107,9 @@ class TaiKhoanApi {
   Future<Map<String, dynamic>> quenMatKhau({
     required String email,
   }) async {
-    final data = await GoiApi.post(
+    final data = await _api.post(
       DuongDanApi.quenMatKhau,
-      {
-        'email': email,
-      },
+      body: {'email': email},
     );
 
     return _chuanHoaKetQua(data);
@@ -99,9 +122,9 @@ class TaiKhoanApi {
   }) async {
     final ma = maOtp ?? otp ?? '';
 
-    final data = await GoiApi.post(
+    final data = await _api.post(
       DuongDanApi.xacThucOtp,
-      {
+      body: {
         'email': email,
         'ma_otp': ma,
       },
@@ -117,9 +140,9 @@ class TaiKhoanApi {
     required String matKhauMoi,
     String? xacNhanMatKhau,
   }) async {
-    final data = await GoiApi.post(
+    final data = await _api.post(
       DuongDanApi.datLaiMatKhau,
-      {
+      body: {
         'email': email,
         'mat_khau_moi': matKhauMoi,
         'xac_nhan_mat_khau': xacNhanMatKhau ?? matKhauMoi,
@@ -132,7 +155,7 @@ class TaiKhoanApi {
   Future<Map<String, dynamic>> layThongTinTaiKhoan({String? token}) async {
     if (token != null && token.isNotEmpty) GoiApi.token = token;
 
-    final data = await GoiApi.get(DuongDanApi.hoSo);
+    final data = await _api.get(DuongDanApi.hoSo);
     final map = _chuanHoaKetQua(data);
     final user = map['user'] ?? map['data'] ?? map;
 
@@ -156,32 +179,28 @@ class TaiKhoanApi {
 
     final ten = hoTen ?? username ?? '';
     final avatarText = avatar?.trim() ?? '';
+
     final laFileAvatar = avatarText.isNotEmpty &&
-        !avatarText.startsWith('http://') &&
-        !avatarText.startsWith('https://') &&
-        !avatarText.startsWith('/uploads/') &&
-        !avatarText.startsWith('uploads/') &&
+        !_laLinkOnline(avatarText) &&
         File(avatarText).existsSync();
 
     final fields = <String, String>{
       'ho_ten': ten,
       'so_dien_thoai': soDienThoai ?? '',
-      if (gioiTinh != null) 'gioi_tinh': gioiTinh.toString(),
-      if (ngaySinh != null && ngaySinh.isNotEmpty) 'ngay_sinh': ngaySinh,
+      'ngay_sinh': ngaySinh?.trim() ?? '',
+      'gioi_tinh': _gioiTinhGiongWeb(gioiTinh),
     };
 
-    final data = laFileAvatar
-        ? await GoiApi.putMultipart(
-            DuongDanApi.capNhatHoSo,
-            fields: fields,
-            files: {
-              'avatar': avatarText,
-            },
-          )
-        : await GoiApi.put(
-            DuongDanApi.capNhatHoSo,
-            fields,
-          );
+    final files = <String, String>{};
+    if (laFileAvatar) {
+      files['avatar'] = avatarText;
+    }
+
+    final data = await _api.putMultipart(
+      DuongDanApi.capNhatHoSo,
+      fields: fields,
+      files: files,
+    );
 
     final map = _chuanHoaKetQua(data);
 
@@ -197,6 +216,7 @@ class TaiKhoanApi {
         'user': {
           ...fields,
           'email': email,
+          if (!laFileAvatar && avatarText.isNotEmpty) 'avatar': avatarText,
         },
       };
     }
@@ -207,9 +227,9 @@ class TaiKhoanApi {
     required String matKhauMoi,
     required String xacNhanMatKhauMoi,
   }) async {
-    final data = await GoiApi.put(
+    final data = await _api.put(
       DuongDanApi.doiMatKhau,
-      {
+      body: {
         'mat_khau_cu': matKhauCu,
         'mat_khau_moi': matKhauMoi,
         'xac_nhan_mat_khau_moi': xacNhanMatKhauMoi,

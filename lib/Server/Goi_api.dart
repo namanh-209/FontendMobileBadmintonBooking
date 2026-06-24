@@ -1,258 +1,307 @@
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../Chung/Duong_dan_api.dart';
 
 class LoiApi implements Exception {
-  final int? statusCode;
   final String message;
+  final int? statusCode;
+  final dynamic data;
 
-  LoiApi(this.message, {this.statusCode});
+  LoiApi(
+    this.message, {
+    this.statusCode,
+    this.data,
+  });
 
   @override
-  String toString() {
-    return message;
-  }
+  String toString() => message;
 }
 
 class GoiApi {
-  static String? token;
+  static String? tokenDangNhap;
 
-  static Map<String, String> get _headers {
-    final h = <String, String>{
-      'Content-Type': 'application/json; charset=utf-8',
+  // Alias để các file cũ còn dùng GoiApi.token không bị lỗi.
+  static String? get token => tokenDangNhap;
+  static set token(String? value) => ganToken(value);
+
+  final Duration timeout;
+
+  GoiApi({
+    this.timeout = const Duration(seconds: 25),
+  });
+
+  static void ganToken(String? token) {
+    final value = token?.trim();
+    tokenDangNhap = (value == null || value.isEmpty) ? null : value;
+  }
+
+  static void xoaToken() {
+    tokenDangNhap = null;
+  }
+
+  static bool get coToken => tokenDangNhap != null && tokenDangNhap!.isNotEmpty;
+
+  Uri _uri(String path, {Map<String, dynamic>? query}) {
+    final uri = Uri.parse(DuongDanApi.noiApi(path));
+
+    if (query == null || query.isEmpty) return uri;
+
+    final params = <String, String>{};
+    query.forEach((key, value) {
+      if (value == null) return;
+      final text = value.toString().trim();
+      if (text.isNotEmpty) params[key] = text;
+    });
+
+    if (params.isEmpty) return uri;
+
+    return uri.replace(
+      queryParameters: {
+        ...uri.queryParameters,
+        ...params,
+      },
+    );
+  }
+
+  Map<String, String> _headers({
+    bool json = true,
+    String? token,
+  }) {
+    final headers = <String, String>{
       'Accept': 'application/json',
     };
 
-    if (token != null && token!.isNotEmpty) {
-      h['Authorization'] = 'Bearer $token';
+    if (json) {
+      headers['Content-Type'] = 'application/json; charset=utf-8';
     }
 
-    return h;
-  }
-
-  static Map<String, String> get _headersMultipart {
-    final h = <String, String>{
-      'Accept': 'application/json',
-    };
-
-    if (token != null && token!.isNotEmpty) {
-      h['Authorization'] = 'Bearer $token';
+    final tokenGuiLen = token ?? tokenDangNhap;
+    if (tokenGuiLen != null && tokenGuiLen.trim().isNotEmpty) {
+      headers['Authorization'] = 'Bearer ${tokenGuiLen.trim()}';
     }
 
-    return h;
+    return headers;
   }
 
-  static Uri _uri(String path) {
-    if (path.startsWith('http://') || path.startsWith('https://')) {
-      return Uri.parse(path);
-    }
-
-    return Uri.parse('${DuongDanApi.goc}$path');
-  }
-
-  static dynamic _decode(String body) {
-    final value = body.trim();
-    if (value.isEmpty) return null;
+  dynamic _decode(String text) {
+    final raw = text.trim();
+    if (raw.isEmpty) return null;
 
     try {
-      return jsonDecode(value);
+      return jsonDecode(raw);
     } catch (_) {
-      return value;
+      if (raw.startsWith('<')) {
+        return {
+          'message': 'API trả về HTML. Thường là sai host/route hoặc backend lỗi 500.',
+          'raw': raw,
+        };
+      }
+      return raw;
     }
   }
 
-  static dynamic _xuLy(http.Response res) {
-    final data = _decode(res.body);
+  dynamic _xuLyKetQua(http.Response response) {
+    final data = _decode(utf8.decode(response.bodyBytes));
 
-    if (res.statusCode >= 200 && res.statusCode < 300) {
+    if (kDebugMode) {
+      debugPrint('API ${response.request?.method ?? ''} ${response.request?.url}');
+      debugPrint('STATUS ${response.statusCode}');
+      debugPrint('BODY ${utf8.decode(response.bodyBytes)}');
+    }
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
       return data;
     }
 
-    String msg = 'Lỗi kết nối API (${res.statusCode})';
+    String message = 'Có lỗi khi gọi API (${response.statusCode})';
 
     if (data is Map) {
-      msg = (data['message'] ?? data['error'] ?? data['msg'] ?? msg).toString();
+      message = (data['message'] ?? data['error'] ?? data['msg'] ?? message).toString();
     } else if (data is String && data.isNotEmpty) {
-      if (data.trimLeft().startsWith('<')) {
-        msg = 'API trả về HTML (${res.statusCode}), kiểm tra lại endpoint hoặc server';
-      } else {
-        msg = data;
-      }
+      message = data;
     }
 
-    throw LoiApi(msg, statusCode: res.statusCode);
-  }
-
-  static Future<dynamic> get(String path) async {
-    final res = await http.get(
-      _uri(path),
-      headers: _headers,
+    throw LoiApi(
+      message,
+      statusCode: response.statusCode,
+      data: data,
     );
-
-    return _xuLy(res);
   }
 
-  static Future<dynamic> post(String path, Map<String, dynamic> body) async {
-    final res = await http.post(
-      _uri(path),
-      headers: _headers,
-      body: jsonEncode(body),
-    );
+  Future<dynamic> get(
+    String path, {
+    Map<String, dynamic>? query,
+    String? token,
+  }) async {
+    final response = await http
+        .get(
+          _uri(path, query: query),
+          headers: _headers(json: false, token: token),
+        )
+        .timeout(timeout);
 
-    return _xuLy(res);
+    return _xuLyKetQua(response);
   }
 
-  static Future<dynamic> put(String path, Map<String, dynamic> body) async {
-    final res = await http.put(
-      _uri(path),
-      headers: _headers,
-      body: jsonEncode(body),
-    );
+  Future<dynamic> post(
+    String path, {
+    Map<String, dynamic>? body,
+    Map<String, dynamic>? query,
+    String? token,
+  }) async {
+    final response = await http
+        .post(
+          _uri(path, query: query),
+          headers: _headers(token: token),
+          body: jsonEncode(body ?? {}),
+        )
+        .timeout(timeout);
 
-    return _xuLy(res);
+    return _xuLyKetQua(response);
   }
 
-  static Future<dynamic> patch(String path, Map<String, dynamic> body) async {
-    final res = await http.patch(
-      _uri(path),
-      headers: _headers,
-      body: jsonEncode(body),
-    );
+  Future<dynamic> put(
+    String path, {
+    Map<String, dynamic>? body,
+    Map<String, dynamic>? query,
+    String? token,
+  }) async {
+    final response = await http
+        .put(
+          _uri(path, query: query),
+          headers: _headers(token: token),
+          body: jsonEncode(body ?? {}),
+        )
+        .timeout(timeout);
 
-    return _xuLy(res);
+    return _xuLyKetQua(response);
   }
 
-  static Future<dynamic> delete(String path) async {
-    final res = await http.delete(
-      _uri(path),
-      headers: _headers,
-    );
+  Future<dynamic> patch(
+    String path, {
+    Map<String, dynamic>? body,
+    Map<String, dynamic>? query,
+    String? token,
+  }) async {
+    final response = await http
+        .patch(
+          _uri(path, query: query),
+          headers: _headers(token: token),
+          body: jsonEncode(body ?? {}),
+        )
+        .timeout(timeout);
 
-    return _xuLy(res);
+    return _xuLyKetQua(response);
   }
 
-  static Future<dynamic> putMultipart(
+  Future<dynamic> delete(
+    String path, {
+    Map<String, dynamic>? body,
+    Map<String, dynamic>? query,
+    String? token,
+  }) async {
+    final request = http.Request('DELETE', _uri(path, query: query));
+    request.headers.addAll(_headers(token: token));
+    if (body != null) request.body = jsonEncode(body);
+
+    final streamed = await request.send().timeout(timeout);
+    final response = await http.Response.fromStream(streamed);
+
+    return _xuLyKetQua(response);
+  }
+
+  Future<dynamic> getAny(List<String> paths) async {
+    Object? loiCuoi;
+    for (final path in paths) {
+      try {
+        return await get(path);
+      } catch (e) {
+        loiCuoi = e;
+      }
+    }
+    if (loiCuoi is LoiApi) throw loiCuoi;
+    throw LoiApi('Không gọi được API');
+  }
+
+  Future<dynamic> postAny(
+    List<String> paths, {
+    Map<String, dynamic>? body,
+  }) async {
+    Object? loiCuoi;
+    for (final path in paths) {
+      try {
+        return await post(path, body: body);
+      } catch (e) {
+        loiCuoi = e;
+      }
+    }
+    if (loiCuoi is LoiApi) throw loiCuoi;
+    throw LoiApi('Không gọi được API');
+  }
+
+  Future<dynamic> patchAny(
+    List<String> paths, {
+    Map<String, dynamic>? body,
+  }) async {
+    Object? loiCuoi;
+    for (final path in paths) {
+      try {
+        return await patch(path, body: body);
+      } catch (e) {
+        loiCuoi = e;
+      }
+    }
+    if (loiCuoi is LoiApi) throw loiCuoi;
+    throw LoiApi('Không gọi được API');
+  }
+
+  Future<dynamic> putMultipart(
     String path, {
     Map<String, String> fields = const {},
     Map<String, String> files = const {},
+    String? token,
   }) async {
     final request = http.MultipartRequest('PUT', _uri(path));
-    request.headers.addAll(_headersMultipart);
+    request.headers.addAll(_headers(json: false, token: token));
     request.fields.addAll(fields);
 
     for (final entry in files.entries) {
-      if (entry.value.trim().isEmpty) continue;
-      request.files.add(
-        await http.MultipartFile.fromPath(entry.key, entry.value),
-      );
+      final value = entry.value.trim();
+      if (value.isEmpty) continue;
+      final file = File(value);
+      if (!file.existsSync()) continue;
+      request.files.add(await http.MultipartFile.fromPath(entry.key, value));
     }
 
-    final streamed = await request.send();
-    final res = await http.Response.fromStream(streamed);
-
-    return _xuLy(res);
+    final streamed = await request.send().timeout(timeout);
+    final response = await http.Response.fromStream(streamed);
+    return _xuLyKetQua(response);
   }
 
-  static Future<dynamic> postMultipart(
+  Future<dynamic> postMultipart(
     String path, {
     Map<String, String> fields = const {},
     Map<String, String> files = const {},
+    String? token,
   }) async {
     final request = http.MultipartRequest('POST', _uri(path));
-    request.headers.addAll(_headersMultipart);
+    request.headers.addAll(_headers(json: false, token: token));
     request.fields.addAll(fields);
 
     for (final entry in files.entries) {
-      if (entry.value.trim().isEmpty) continue;
-      request.files.add(
-        await http.MultipartFile.fromPath(entry.key, entry.value),
-      );
+      final value = entry.value.trim();
+      if (value.isEmpty) continue;
+      final file = File(value);
+      if (!file.existsSync()) continue;
+      request.files.add(await http.MultipartFile.fromPath(entry.key, value));
     }
 
-    final streamed = await request.send();
-    final res = await http.Response.fromStream(streamed);
-
-    return _xuLy(res);
-  }
-
-  static Future<dynamic> getAny(List<String> paths) async {
-    Object? lastError;
-
-    for (final p in paths) {
-      try {
-        return await get(p);
-      } catch (e) {
-        lastError = e;
-      }
-    }
-
-    throw lastError ?? LoiApi('Không gọi được API');
-  }
-
-  static Future<dynamic> postAny(
-    List<String> paths,
-    Map<String, dynamic> body,
-  ) async {
-    Object? lastError;
-
-    for (final p in paths) {
-      try {
-        return await post(p, body);
-      } catch (e) {
-        lastError = e;
-      }
-    }
-
-    throw lastError ?? LoiApi('Không gọi được API');
-  }
-
-  static Future<dynamic> putAny(
-    List<String> paths,
-    Map<String, dynamic> body,
-  ) async {
-    Object? lastError;
-
-    for (final p in paths) {
-      try {
-        return await put(p, body);
-      } catch (e) {
-        lastError = e;
-      }
-    }
-
-    throw lastError ?? LoiApi('Không gọi được API');
-  }
-
-  static Future<dynamic> patchAny(
-    List<String> paths,
-    Map<String, dynamic> body,
-  ) async {
-    Object? lastError;
-
-    for (final p in paths) {
-      try {
-        return await patch(p, body);
-      } catch (e) {
-        lastError = e;
-      }
-    }
-
-    throw lastError ?? LoiApi('Không gọi được API');
-  }
-
-  static Future<dynamic> deleteAny(List<String> paths) async {
-    Object? lastError;
-
-    for (final p in paths) {
-      try {
-        return await delete(p);
-      } catch (e) {
-        lastError = e;
-      }
-    }
-
-    throw lastError ?? LoiApi('Không gọi được API');
+    final streamed = await request.send().timeout(timeout);
+    final response = await http.Response.fromStream(streamed);
+    return _xuLyKetQua(response);
   }
 }
