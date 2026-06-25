@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import '../Chung/Duong_dan_api.dart';
 import '../Mau_du_lieu/Dat_san.dart';
 import '../Server/Goi_api.dart';
@@ -5,23 +7,64 @@ import '../Server/Goi_api.dart';
 class DatSanApi {
   final GoiApi _api = GoiApi();
 
+  Exception _loi(String noiDung) {
+    return Exception(noiDung);
+  }
+
   List<dynamic> _layMang(dynamic data) {
     if (data is List) return data;
+
     if (data is Map) {
-      for (final key in ['data', 'danh_sach', 'lich_dat', 'dat_san', 'items', 'results', 'rows', 'lich_su']) {
+      for (final key in [
+        'data',
+        'danh_sach',
+        'lich_dat',
+        'dat_san',
+        'items',
+        'results',
+        'rows',
+        'lich_su',
+        'bookings',
+        'booking',
+      ]) {
         final value = data[key];
+
         if (value is List) return value;
       }
-      if (data['data'] is Map) return _layMang(data['data']);
+
+      if (data['data'] is Map) {
+        return _layMang(data['data']);
+      }
+
+      if (data['result'] is Map) {
+        return _layMang(data['result']);
+      }
     }
+
     return [];
   }
 
   Map<String, dynamic>? _layObject(dynamic data) {
-    if (data is Map && data['data'] is Map) return Map<String, dynamic>.from(data['data']);
-    if (data is Map && data['dat_san'] is Map) return Map<String, dynamic>.from(data['dat_san']);
-    if (data is Map && data['booking'] is Map) return Map<String, dynamic>.from(data['booking']);
-    if (data is Map) return Map<String, dynamic>.from(data);
+    if (data is Map && data['data'] is Map) {
+      return Map<String, dynamic>.from(data['data']);
+    }
+
+    if (data is Map && data['dat_san'] is Map) {
+      return Map<String, dynamic>.from(data['dat_san']);
+    }
+
+    if (data is Map && data['booking'] is Map) {
+      return Map<String, dynamic>.from(data['booking']);
+    }
+
+    if (data is Map && data['result'] is Map) {
+      return Map<String, dynamic>.from(data['result']);
+    }
+
+    if (data is Map) {
+      return Map<String, dynamic>.from(data);
+    }
+
     return null;
   }
 
@@ -29,6 +72,7 @@ class DatSanApi {
     for (final item in chiTiet) {
       final value = item['ngay'] ?? item['ngay_dat'] ?? item['date'];
       final text = value?.toString().trim() ?? '';
+
       if (text.isNotEmpty) {
         return text.length >= 10 ? text.substring(0, 10) : text;
       }
@@ -37,6 +81,7 @@ class DatSanApi {
     final now = DateTime.now();
     final m = now.month.toString().padLeft(2, '0');
     final d = now.day.toString().padLeft(2, '0');
+
     return '${now.year}-$m-$d';
   }
 
@@ -44,11 +89,16 @@ class DatSanApi {
     return chiTiet.map((item) {
       return {
         'san_id': item['san_id'] ?? item['sanId'] ?? item['id_san'],
-        'khung_gio_mau_id': item['khung_gio_mau_id'] ?? item['khungGioMauId'] ?? item['khung_gio_id'],
+        'khung_gio_mau_id': item['khung_gio_mau_id'] ??
+            item['khungGioMauId'] ??
+            item['khung_gio_id'],
       };
     }).where((item) {
       final sanId = int.tryParse('${item['san_id'] ?? ''}') ?? 0;
-      final khungGioMauId = int.tryParse('${item['khung_gio_mau_id'] ?? ''}') ?? 0;
+
+      final khungGioMauId =
+          int.tryParse('${item['khung_gio_mau_id'] ?? ''}') ?? 0;
+
       return sanId > 0 && khungGioMauId > 0;
     }).toList();
   }
@@ -61,7 +111,7 @@ class DatSanApi {
     final slots = _laySlots(chiTiet);
 
     if (slots.isEmpty) {
-      throw LoiApi('Bạn chưa chọn sân hoặc khung giờ hợp lệ');
+      throw _loi('Bạn chưa chọn sân hoặc khung giờ hợp lệ');
     }
 
     final bodyGiuCho = {
@@ -77,21 +127,32 @@ class DatSanApi {
     );
 
     final obj = _layObject(data);
-    if (obj == null) throw LoiApi('API giữ chỗ chưa trả dữ liệu đặt sân');
+
+    if (obj == null) {
+      throw _loi('API giữ chỗ chưa trả dữ liệu đặt sân');
+    }
 
     final tongTamTinh = chiTiet.fold<double>(
       0,
-      (sum, item) => sum + (double.tryParse('${item['gia'] ?? 0}') ?? 0),
+      (sum, item) {
+        return sum + (double.tryParse('${item['gia'] ?? 0}') ?? 0);
+      },
     );
 
     return DatSan.fromJson({
       ...obj,
-      if (obj['id'] == null && obj['dat_san_id'] != null) 'id': obj['dat_san_id'],
+      if (obj['id'] == null && obj['dat_san_id'] != null)
+        'id': obj['dat_san_id'],
+      if (obj['id'] == null && obj['booking_id'] != null)
+        'id': obj['booking_id'],
       if (obj['co_so_id'] == null) 'co_so_id': coSoId,
       if (obj['chi_tiet'] == null) 'chi_tiet': chiTiet,
-      if (obj['tong_tien'] == null && obj['tongTien'] == null) 'tong_tien': tongTamTinh,
-      if (obj['thanh_tien'] == null && obj['thanhTien'] == null) 'thanh_tien': tongTamTinh,
-      if (obj['tien_coc'] == null && obj['tienCoc'] == null) 'tien_coc': tongTamTinh,
+      if (obj['tong_tien'] == null && obj['tongTien'] == null)
+        'tong_tien': tongTamTinh,
+      if (obj['thanh_tien'] == null && obj['thanhTien'] == null)
+        'thanh_tien': tongTamTinh,
+      if (obj['tien_coc'] == null && obj['tienCoc'] == null)
+        'tien_coc': tongTamTinh,
     });
   }
 
@@ -112,8 +173,14 @@ class DatSanApi {
     );
 
     if (data is Map<String, dynamic>) return data;
-    if (data is Map) return Map<String, dynamic>.from(data);
-    return {'message': 'Giữ chỗ thành công'};
+
+    if (data is Map) {
+      return Map<String, dynamic>.from(data);
+    }
+
+    return {
+      'message': 'Giữ chỗ thành công',
+    };
   }
 
   Future<DatSan> giuCho({
@@ -121,55 +188,79 @@ class DatSanApi {
     required List<Map<String, dynamic>> chiTiet,
     String ghiChu = '',
   }) {
-    return taoDatSan(coSoId: coSoId, chiTiet: chiTiet, ghiChu: ghiChu);
+    return taoDatSan(
+      coSoId: coSoId,
+      chiTiet: chiTiet,
+      ghiChu: ghiChu,
+    );
   }
 
   Future<List<DatSan>> layLichDatCuaToi() async {
-    final endpoints = [
-      DuongDanApi.lichSuDatSanCuaToi,
-      '/dat-san/cua-toi',
-      '/huy-dat-san/cua-toi',
-      '/dat-san/lich-su',
-      '/booking/my',
-    ];
+    try {
+      final data = await _api.get('/dat-san/lich-su-cua-toi');
 
-    Object? loiCuoi;
+      final list = _layMang(data)
+          .whereType<Map>()
+          .map((item) {
+            return DatSan.fromJson(
+              Map<String, dynamic>.from(item),
+            );
+          })
+          .toList();
 
-    for (final endpoint in endpoints) {
-      try {
-        final data = await _api.get(endpoint);
-        return _layMang(data)
-            .whereType<Map>()
-            .map((item) => DatSan.fromJson(Map<String, dynamic>.from(item)))
-            .toList();
-      } catch (e) {
-        loiCuoi = e;
+      debugPrint(
+        'LAY LICH WEB /dat-san/lich-su-cua-toi: ${list.length} DON',
+      );
+
+      for (final item in list) {
+        debugPrint(
+          'DON #${item.id} | trangThai=${item.trangThai} | thanhTien=${item.thanhTien} | tongTien=${item.tongTien} | daThanhToan=${item.daThanhToan} | tienCoc=${item.tienCoc} | chiTiet=${item.chiTiet.length}',
+        );
       }
-    }
 
-    if (loiCuoi is LoiApi) throw loiCuoi;
-    throw LoiApi('Không lấy được lịch đặt của tôi');
+      return list;
+    } catch (e) {
+      debugPrint('LOI LAY LICH WEB: $e');
+      rethrow;
+    }
   }
 
-  Future<List<DatSan>> layLichSuDatSanCuaToi() => layLichDatCuaToi();
+  Future<List<DatSan>> layLichSuDatSanCuaToi() {
+    return layLichDatCuaToi();
+  }
 
   Future<List<dynamic>> layLichSuCuaToi() async {
     return layLichDatCuaToi();
   }
 
-  Future<void> huyDatSan({
+  Future<Map<String, dynamic>> huyDatSan({
     required int datSanId,
     required String lyDoHuy,
   }) async {
-    await _api.patchAny(
-      [
-        DuongDanApi.huyGiuCho(datSanId),
-        DuongDanApi.huyDatSan(datSanId),
-      ],
-      body: {
-        'ly_do_huy': lyDoHuy,
-      },
-    );
+    debugPrint('GOI API HUY: /huy-dat-san/$datSanId');
+
+    final data = await _api
+        .patch(
+          '/huy-dat-san/$datSanId',
+          body: {
+            'ly_do_huy': lyDoHuy.trim(),
+          },
+        )
+        .timeout(
+          const Duration(seconds: 10),
+        );
+
+    debugPrint('API HUY XONG: /huy-dat-san/$datSanId');
+
+    if (data is Map<String, dynamic>) return data;
+
+    if (data is Map) {
+      return Map<String, dynamic>.from(data);
+    }
+
+    return {
+      'message': 'Đã hủy lịch đặt sân',
+    };
   }
 
   Future<Map<String, dynamic>> huyGiuCho(dynamic datSanId) async {
@@ -179,8 +270,14 @@ class DatSanApi {
     );
 
     if (data is Map<String, dynamic>) return data;
-    if (data is Map) return Map<String, dynamic>.from(data);
-    return {'message': 'Đã hủy giữ chỗ'};
+
+    if (data is Map) {
+      return Map<String, dynamic>.from(data);
+    }
+
+    return {
+      'message': 'Đã hủy giữ chỗ',
+    };
   }
 
   Future<Map<String, dynamic>> capNhatGhiChu({
@@ -195,8 +292,14 @@ class DatSanApi {
     );
 
     if (data is Map<String, dynamic>) return data;
-    if (data is Map) return Map<String, dynamic>.from(data);
-    return {'message': 'Đã lưu ghi chú'};
+
+    if (data is Map) {
+      return Map<String, dynamic>.from(data);
+    }
+
+    return {
+      'message': 'Đã lưu ghi chú',
+    };
   }
 
   Future<Map<String, dynamic>> apDungKhuyenMai({
@@ -206,13 +309,20 @@ class DatSanApi {
     final data = await _api.patch(
       DuongDanApi.apDungKhuyenMai(datSanId),
       body: {
-        'ma_khuyen_mai': maKhuyenMai.trim().isEmpty ? null : maKhuyenMai.trim(),
+        'ma_khuyen_mai':
+            maKhuyenMai.trim().isEmpty ? null : maKhuyenMai.trim(),
       },
     );
 
     if (data is Map<String, dynamic>) return data;
-    if (data is Map) return Map<String, dynamic>.from(data);
-    return {'message': 'Đã cập nhật khuyến mãi'};
+
+    if (data is Map) {
+      return Map<String, dynamic>.from(data);
+    }
+
+    return {
+      'message': 'Đã cập nhật khuyến mãi',
+    };
   }
 
   Future<List<dynamic>> layKhuyenMaiCongKhai({
@@ -228,15 +338,20 @@ class DatSanApi {
     );
 
     if (data is List) return data;
+
     if (data is Map) {
-      final list = data['danh_sach'] ?? data['data'] ?? data['items'] ?? data['rows'];
+      final list =
+          data['danh_sach'] ?? data['data'] ?? data['items'] ?? data['rows'];
+
       if (list is List) return list;
+
       if (data['data'] is Map) {
         final nested = data['data']['danh_sach'] ?? data['data']['items'];
+
         if (nested is List) return nested;
       }
     }
+
     return [];
   }
-
 }

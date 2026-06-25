@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-
-import '../Chung/Duong_dan_api.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
 
+import '../Chung/Duong_dan_api.dart';
 import '../Chung/Duong_dan_anh.dart';
 import '../Mau_du_lieu/Co_so.dart';
 import '../Xu_li/Xu_li_co_so.dart';
+import '../Xu_li/Xu_li_yeu_thich.dart';
 import 'Man_hinh_chi_tiet_san.dart';
 
 class ManHinhTatCaSan extends StatefulWidget {
@@ -27,15 +28,24 @@ class _ManHinhTatCaSanState extends State<ManHinhTatCaSan> {
   String tuKhoa = '';
   String sapXepDangChon = 'Mặc định';
 
+  double? viDoNguoiDung;
+  double? kinhDoNguoiDung;
+
+  bool dangLayViTri = false;
+
   @override
   void initState() {
     super.initState();
 
-    Future.microtask(() {
+    Future.microtask(() async {
+      await context.read<XuLiYeuThich>().taiYeuThichDaLuu();
+
+      if (!mounted) return;
+
       final xuLiCoSo = context.read<XuLiCoSo>();
 
       if (xuLiCoSo.danhSachCoSo.isEmpty) {
-        xuLiCoSo.layDanhSachCoSo();
+        await xuLiCoSo.layDanhSachCoSo();
       }
 
       if (widget.tuDongFocusTimKiem) {
@@ -55,11 +65,78 @@ class _ManHinhTatCaSanState extends State<ManHinhTatCaSan> {
     super.dispose();
   }
 
+  void hienThongBao(String noiDung) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(noiDung),
+      ),
+    );
+  }
+
   String dinhDangGia(double gia) {
     return '${gia.toStringAsFixed(0).replaceAllMapped(
           RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
           (Match m) => '${m[1]}.',
         )}đ';
+  }
+
+  String hienThiSoSan(CoSo coSo) {
+    final soSan = coSo.soLuongSan > 0
+        ? coSo.soLuongSan
+        : coSo.danhSachSan.length;
+
+    return '$soSan sân';
+  }
+
+  double? tinhKhoangCachKm(CoSo coSo) {
+    if (viDoNguoiDung == null || kinhDoNguoiDung == null) {
+      return null;
+    }
+
+    final viDoCoSo = coSo.viDo;
+    final kinhDoCoSo = coSo.kinhDo;
+
+    if (viDoCoSo == null || kinhDoCoSo == null) {
+      return null;
+    }
+
+    if (viDoCoSo == 0 || kinhDoCoSo == 0) {
+      return null;
+    }
+
+    final met = Geolocator.distanceBetween(
+      viDoNguoiDung!,
+      kinhDoNguoiDung!,
+      viDoCoSo,
+      kinhDoCoSo,
+    );
+
+    return met / 1000;
+  }
+
+  String dinhDangKhoangCach(double km) {
+    if (km < 1) {
+      return '${(km * 1000).round()} m';
+    }
+
+    if (km < 10) {
+      return '${km.toStringAsFixed(1)} km';
+    }
+
+    return '${km.toStringAsFixed(0)} km';
+  }
+
+  String hienThiTinhVaKhoangCach(CoSo coSo) {
+    final tinh = coSo.tinhThanh.isEmpty ? 'Cơ sở cầu lông' : coSo.tinhThanh;
+    final khoangCach = tinhKhoangCachKm(coSo);
+
+    if (khoangCach == null) {
+      return tinh;
+    }
+
+    return '$tinh • ${dinhDangKhoangCach(khoangCach)}';
   }
 
   void chuyenChiTietCoSo(CoSo coSo) {
@@ -71,6 +148,69 @@ class _ManHinhTatCaSanState extends State<ManHinhTatCaSan> {
         ),
       ),
     );
+  }
+
+  Future<void> doiYeuThich(CoSo coSo) async {
+    await context.read<XuLiYeuThich>().doiYeuThich(coSo.id);
+  }
+
+  Future<void> sapXepTheoGanBan() async {
+    if (dangLayViTri) return;
+
+    setState(() {
+      dangLayViTri = true;
+    });
+
+    try {
+      final daBatDichVuViTri = await Geolocator.isLocationServiceEnabled();
+
+      if (!daBatDichVuViTri) {
+        hienThongBao('Bạn cần bật vị trí để tìm sân gần bạn');
+        await Geolocator.openLocationSettings();
+        return;
+      }
+
+      var quyen = await Geolocator.checkPermission();
+
+      if (quyen == LocationPermission.denied) {
+        quyen = await Geolocator.requestPermission();
+      }
+
+      if (quyen == LocationPermission.denied) {
+        hienThongBao('Bạn chưa cấp quyền vị trí');
+        return;
+      }
+
+      if (quyen == LocationPermission.deniedForever) {
+        hienThongBao('Bạn đã chặn quyền vị trí, hãy mở cài đặt để cấp lại');
+        await Geolocator.openAppSettings();
+        return;
+      }
+
+      final caiDatViTri = const LocationSettings(
+        accuracy: LocationAccuracy.high,
+      );
+
+      final viTri = await Geolocator.getCurrentPosition(
+        locationSettings: caiDatViTri,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        viDoNguoiDung = viTri.latitude;
+        kinhDoNguoiDung = viTri.longitude;
+        sapXepDangChon = 'Gần bạn';
+      });
+    } catch (_) {
+      hienThongBao('Không lấy được vị trí hiện tại');
+    } finally {
+      if (mounted) {
+        setState(() {
+          dangLayViTri = false;
+        });
+      }
+    }
   }
 
   List<CoSo> locDanhSach(List<CoSo> danhSach) {
@@ -87,12 +227,31 @@ class _ManHinhTatCaSanState extends State<ManHinhTatCaSan> {
       }).toList();
     }
 
-    if (sapXepDangChon == 'Giá thấp đến cao') {
-      ketQua.sort((a, b) => a.giaThapNhat.compareTo(b.giaThapNhat));
+    if (sapXepDangChon == 'Gần bạn' &&
+        viDoNguoiDung != null &&
+        kinhDoNguoiDung != null) {
+      ketQua.sort((a, b) {
+        final khoangCachA = tinhKhoangCachKm(a) ?? double.maxFinite;
+        final khoangCachB = tinhKhoangCachKm(b) ?? double.maxFinite;
+
+        return khoangCachA.compareTo(khoangCachB);
+      });
+    } else if (sapXepDangChon == 'Giá thấp đến cao') {
+      ketQua.sort((a, b) {
+        final giaA = a.giaThapNhat <= 0 ? double.maxFinite : a.giaThapNhat;
+        final giaB = b.giaThapNhat <= 0 ? double.maxFinite : b.giaThapNhat;
+
+        return giaA.compareTo(giaB);
+      });
     } else if (sapXepDangChon == 'Giá cao đến thấp') {
       ketQua.sort((a, b) => b.giaThapNhat.compareTo(a.giaThapNhat));
     } else if (sapXepDangChon == 'Nhiều sân nhất') {
-      ketQua.sort((a, b) => b.soLuongSan.compareTo(a.soLuongSan));
+      ketQua.sort((a, b) {
+        final sanA = a.soLuongSan > 0 ? a.soLuongSan : a.danhSachSan.length;
+        final sanB = b.soLuongSan > 0 ? b.soLuongSan : b.danhSachSan.length;
+
+        return sanB.compareTo(sanA);
+      });
     }
 
     return ketQua;
@@ -349,6 +508,8 @@ class _ManHinhTatCaSanState extends State<ManHinhTatCaSan> {
   }
 
   Widget theCoSo(CoSo coSo) {
+    final daYeuThich = context.watch<XuLiYeuThich>().kiemTraYeuThich(coSo.id);
+
     return InkWell(
       onTap: () {
         chuyenChiTietCoSo(coSo);
@@ -409,6 +570,29 @@ class _ManHinhTatCaSanState extends State<ManHinhTatCaSan> {
                     ),
                   ),
                   Positioned(
+                    top: 6,
+                    right: 6,
+                    child: InkWell(
+                      onTap: () {
+                        doiYeuThich(coSo);
+                      },
+                      borderRadius: BorderRadius.circular(20),
+                      child: Container(
+                        width: 25,
+                        height: 25,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.95),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          daYeuThich ? Icons.favorite : Icons.favorite_border,
+                          color: daYeuThich ? Colors.red : Colors.black87,
+                          size: 17,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
                     left: 8,
                     bottom: 8,
                     child: Container(
@@ -421,7 +605,7 @@ class _ManHinhTatCaSanState extends State<ManHinhTatCaSan> {
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        '${coSo.soLuongSan} sân',
+                        hienThiSoSan(coSo),
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 10.5,
@@ -454,9 +638,7 @@ class _ManHinhTatCaSanState extends State<ManHinhTatCaSan> {
                           ),
                           const SizedBox(height: 1),
                           Text(
-                            coSo.tinhThanh.isEmpty
-                                ? 'Cơ sở cầu lông'
-                                : coSo.tinhThanh,
+                            hienThiTinhVaKhoangCach(coSo),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
@@ -534,7 +716,7 @@ class _ManHinhTatCaSanState extends State<ManHinhTatCaSan> {
                     ),
                     const SizedBox(width: 5),
                     SizedBox(
-                      width: 66,
+                      width: 65,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
@@ -714,9 +896,13 @@ class _ManHinhTatCaSanState extends State<ManHinhTatCaSan> {
                         () {},
                       ),
                       nutLoc(
-                        'Gần bạn',
+                        dangLayViTri
+                            ? 'Đang lấy'
+                            : sapXepDangChon == 'Gần bạn'
+                                ? 'Gần nhất'
+                                : 'Gần bạn',
                         Icons.location_on_rounded,
-                        () {},
+                        sapXepTheoGanBan,
                       ),
                       nutLoc(
                         'Sắp xếp',
