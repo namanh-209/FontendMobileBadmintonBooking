@@ -30,19 +30,78 @@ class DuongDanApi {
     return '$gocApi/$value';
   }
 
+  static String _xoaDauNgoacNeuCo(String value) {
+    var text = value.trim();
+
+    while ((text.startsWith('\"') && text.endsWith('\"')) ||
+        (text.startsWith("'") && text.endsWith("'"))) {
+      text = text.substring(1, text.length - 1).trim();
+    }
+
+    return text;
+  }
+
+  static String _doiLocalhostTheoHostDangDung(String value) {
+    final uri = Uri.tryParse(value);
+    final hostUri = Uri.tryParse(gocServer);
+
+    if (uri == null || hostUri == null) return value;
+
+    final host = uri.host.toLowerCase();
+    final laLocalhost = host == 'localhost' || host == '127.0.0.1' || host == '0.0.0.0';
+
+    if (!laLocalhost) return value;
+
+    return uri
+        .replace(
+          scheme: hostUri.scheme,
+          host: hostUri.host,
+          port: hostUri.hasPort ? hostUri.port : null,
+        )
+        .toString();
+  }
+
   static String noiServer(String path) {
-    final value = path.trim();
-    if (value.isEmpty) return '';
-    if (value.startsWith('http://') || value.startsWith('https://')) return value;
-    if (value.startsWith('//')) return 'https:$value';
-    if (value.startsWith('res.cloudinary.com/')) return 'https://$value';
-    if (value.startsWith('/')) return '$gocServer$value';
-    return '$gocServer/$value';
+    var value = path.trim();
+
+    if (value.isEmpty || value.toLowerCase() == 'null') return '';
+
+    value = _xoaDauNgoacNeuCo(value);
+    value = value.replaceAll('\\', '/');
+
+    if (value.startsWith('//')) {
+      return 'https:$value';
+    }
+
+    if (value.startsWith('res.cloudinary.com/')) {
+      return 'https://$value';
+    }
+
+    if (value.startsWith('http://') || value.startsWith('https://')) {
+      return _doiLocalhostTheoHostDangDung(value);
+    }
+
+    if (value.startsWith('/')) {
+      return '$gocServer$value';
+    }
+
+    if (value.startsWith('uploads/') ||
+        value.startsWith('upload/') ||
+        value.startsWith('storage/') ||
+        value.startsWith('public/')) {
+      return '$gocServer/$value';
+    }
+
+    if (value.contains('/')) {
+      return '$gocServer/$value';
+    }
+
+    return '$gocServer/uploads/$value';
   }
 
   static String anh(String? duongDanAnh) {
     final value = (duongDanAnh ?? '').trim();
-    if (value.isEmpty || value == 'null') return '';
+    if (value.isEmpty || value.toLowerCase() == 'null') return '';
     return noiServer(value);
   }
 

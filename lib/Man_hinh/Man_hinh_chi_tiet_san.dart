@@ -205,6 +205,7 @@ class _ManHinhChiTietSanState extends State<ManHinhChiTietSan> {
   final TextEditingController ghiChuController = TextEditingController();
 
   late CoSo coSo;
+  String anhCoSoDuPhong = '';
 
   DateTime ngayDangChon = DateTime.now();
 
@@ -233,6 +234,8 @@ class _ManHinhChiTietSanState extends State<ManHinhChiTietSan> {
           diaChi: 'Chưa cập nhật địa chỉ',
           moTa: 'Sân cầu lông sạch sẽ, thoáng mát.',
         );
+
+    anhCoSoDuPhong = coSo.hinhAnh.trim();
 
     Future.microtask(taiDuLieuLanDau);
   }
@@ -329,12 +332,22 @@ class _ManHinhChiTietSanState extends State<ManHinhChiTietSan> {
         )}đ';
   }
 
+  String linkAnhTuText(String value) {
+    final text = value.trim();
+
+    if (text.isEmpty || text.toLowerCase() == 'null') return '';
+
+    return DuongDanApi.linkAnh(text);
+  }
+
   String linkAnhCoSo() {
-    final hinhAnh = coSo.hinhAnh.trim();
+    final hinhAnhMoi = coSo.hinhAnh.trim();
+    final hinhAnh = hinhAnhMoi.isNotEmpty ? hinhAnhMoi : anhCoSoDuPhong;
+    final url = linkAnhTuText(hinhAnh);
 
-    if (hinhAnh.isEmpty) return '';
+    debugPrint('ANH CO SO CHI TIET/LICH: $url');
 
-    return DuongDanApi.linkAnh(hinhAnh);
+    return url;
   }
 
   Future<void> taiDuLieuLanDau() async {
@@ -352,11 +365,25 @@ class _ManHinhChiTietSanState extends State<ManHinhChiTietSan> {
       if (!mounted) return;
 
       setState(() {
-        coSo = chiTietCoSo;
+        final anhCu = coSo.hinhAnh.trim().isNotEmpty
+            ? coSo.hinhAnh.trim()
+            : anhCoSoDuPhong;
+
+        if (chiTietCoSo.hinhAnh.trim().isEmpty && anhCu.isNotEmpty) {
+          coSo = chiTietCoSo.copyWith(
+            hinhAnh: anhCu,
+          );
+          anhCoSoDuPhong = anhCu;
+        } else {
+          coSo = chiTietCoSo;
+          anhCoSoDuPhong = chiTietCoSo.hinhAnh.trim();
+        }
+
         bangGia = gia;
       });
     } catch (e) {
       if (!mounted) return;
+
       setState(() {
         loi = '$e';
       });
@@ -399,6 +426,7 @@ class _ManHinhChiTietSanState extends State<ManHinhChiTietSan> {
       });
     } catch (e) {
       if (!mounted) return;
+
       setState(() {
         loi = '$e';
       });
@@ -695,7 +723,8 @@ class _ManHinhChiTietSanState extends State<ManHinhChiTietSan> {
                   : Image.network(
                       url,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) {
+                      errorBuilder: (_, error, ___) {
+                        debugPrint('LOI TAI ANH CO SO LON: $url - $error');
                         return const Icon(
                           Icons.sports_tennis_rounded,
                           size: 60,
@@ -797,6 +826,7 @@ class _ManHinhChiTietSanState extends State<ManHinhChiTietSan> {
           const SizedBox(height: 9),
           Text(
             moTa,
+            softWrap: true,
             style: const TextStyle(
               fontSize: 11,
               color: Colors.black87,
@@ -900,6 +930,7 @@ class _ManHinhChiTietSanState extends State<ManHinhChiTietSan> {
                       children: [
                         Text(
                           tenLoaiNgay,
+                          softWrap: true,
                           style: const TextStyle(
                             fontSize: 11.5,
                             color: Colors.black,
@@ -909,6 +940,7 @@ class _ManHinhChiTietSanState extends State<ManHinhChiTietSan> {
                         const SizedBox(height: 2),
                         Text(
                           tenLoaiGio,
+                          softWrap: true,
                           style: TextStyle(
                             fontSize: 10.5,
                             color: Colors.grey.shade700,
@@ -918,6 +950,7 @@ class _ManHinhChiTietSanState extends State<ManHinhChiTietSan> {
                       ],
                     ),
                   ),
+                  const SizedBox(width: 8),
                   Text(
                     giaText,
                     style: const TextStyle(
@@ -983,6 +1016,7 @@ class _ManHinhChiTietSanState extends State<ManHinhChiTietSan> {
                   const SizedBox(height: 2),
                   Text(
                     noiDung,
+                    softWrap: true,
                     style: const TextStyle(
                       fontSize: 10,
                       color: Colors.black87,
@@ -991,6 +1025,7 @@ class _ManHinhChiTietSanState extends State<ManHinhChiTietSan> {
                 ],
               ),
             ),
+            const SizedBox(width: 6),
             Text(
               ngay,
               style: TextStyle(
@@ -1122,6 +1157,7 @@ class _ManHinhChiTietSanState extends State<ManHinhChiTietSan> {
           const SizedBox(height: 12),
           Text(
             coSo.tenCoSo,
+            softWrap: true,
             style: const TextStyle(
               fontSize: 17,
               color: Colors.black,
@@ -1129,66 +1165,82 @@ class _ManHinhChiTietSanState extends State<ManHinhChiTietSan> {
             ),
           ),
           const SizedBox(height: 7),
-          Row(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(
-                Icons.access_time,
-                size: 14,
-                color: Colors.grey.shade700,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                '5:00 - 22:00',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Colors.grey.shade700,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Icon(
-                Icons.location_on,
-                size: 14,
-                color: Colors.grey.shade700,
-              ),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  diaChiDayDu.isEmpty ? 'Chưa cập nhật địa chỉ' : diaChiDayDu,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 11,
+              Row(
+                children: [
+                  Icon(
+                    Icons.access_time,
+                    size: 14,
                     color: Colors.grey.shade700,
-                    fontWeight: FontWeight.w600,
                   ),
-                ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '5:00 - 22:00',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.grey.shade700,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 9,
-                  vertical: 7,
-                ),
-                decoration: BoxDecoration(
-                  border: Border.all(
-                    color: const Color(0xff2454ff),
+              const SizedBox(height: 6),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.location_on,
+                    size: 14,
+                    color: Colors.grey.shade700,
                   ),
-                  borderRadius: BorderRadius.circular(9),
-                  color: Colors.white,
-                ),
-                child: Text(
-                  coSo.giaThapNhat > 0
-                      ? 'Chỉ từ\n${dinhDangTien(coSo.giaThapNhat)}/giờ'
-                      : 'Chưa có\ngiá',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Color(0xff2454ff),
-                    fontSize: 9,
-                    fontWeight: FontWeight.w900,
-                    height: 1.15,
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      diaChiDayDu.isEmpty
+                          ? 'Chưa cập nhật địa chỉ'
+                          : diaChiDayDu,
+                      softWrap: true,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey.shade700,
+                        fontWeight: FontWeight.w600,
+                        height: 1.3,
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
+              if (coSo.giaThapNhat > 0) ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 9,
+                      vertical: 7,
+                    ),
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: const Color(0xff2454ff),
+                      ),
+                      borderRadius: BorderRadius.circular(9),
+                      color: Colors.white,
+                    ),
+                    child: Text(
+                      'Chỉ từ\n${dinhDangTien(coSo.giaThapNhat)}/giờ',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Color(0xff2454ff),
+                        fontSize: 9,
+                        fontWeight: FontWeight.w900,
+                        height: 1.15,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
           const SizedBox(height: 8),
@@ -1269,8 +1321,10 @@ class _ManHinhChiTietSanState extends State<ManHinhChiTietSan> {
               ),
             ),
           ],
-          const SizedBox(height: 14),
-          theDanhGia(),
+          if (!dangXemBangGia) ...[
+            const SizedBox(height: 14),
+            theDanhGia(),
+          ],
         ],
       ),
     );
@@ -1474,7 +1528,8 @@ class _ManHinhChiTietSanState extends State<ManHinhChiTietSan> {
                         : Image.network(
                             url,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) {
+                            errorBuilder: (_, error, ___) {
+                              debugPrint('LOI TAI ANH TOM TAT SAN: $url - $error');
                               return Container(
                                 color: const Color(0xffe7f1ff),
                                 child: const Icon(
@@ -1520,8 +1575,8 @@ class _ManHinhChiTietSanState extends State<ManHinhChiTietSan> {
                 children: [
                   Text(
                     coSo.tenCoSo,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    maxLines: 2,
+                    softWrap: true,
                     style: const TextStyle(
                       fontSize: 13,
                       color: Colors.black,
@@ -1548,6 +1603,7 @@ class _ManHinhChiTietSanState extends State<ManHinhChiTietSan> {
                   ),
                   const SizedBox(height: 4),
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Icon(
                         Icons.location_on,
@@ -1560,8 +1616,8 @@ class _ManHinhChiTietSanState extends State<ManHinhChiTietSan> {
                           coSo.tinhThanh.isEmpty
                               ? 'TP. Hồ Chí Minh'
                               : coSo.tinhThanh,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                          maxLines: 2,
+                          softWrap: true,
                           style: TextStyle(
                             fontSize: 9,
                             color: Colors.grey.shade700,

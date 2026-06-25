@@ -12,6 +12,98 @@ int _intTuJson(dynamic value) {
   return int.tryParse('$value') ?? 0;
 }
 
+
+String _layTextAnh(dynamic value) {
+  if (value == null) return '';
+
+  if (value is String) {
+    final text = value.trim();
+    if (text.isEmpty || text.toLowerCase() == 'null') return '';
+    return text;
+  }
+
+  if (value is List) {
+    for (final item in value) {
+      final text = _layTextAnh(item);
+      if (text.isNotEmpty) return text;
+    }
+    return '';
+  }
+
+  if (value is Map) {
+    final map = Map<String, dynamic>.from(value);
+
+    final keys = [
+      'url',
+      'secure_url',
+      'src',
+      'path',
+      'duong_dan',
+      'duongDan',
+      'link',
+      'image',
+      'image_url',
+      'imageUrl',
+      'hinh_anh',
+      'hinhAnh',
+      'anh_chinh',
+      'anhChinh',
+      'url_anh',
+      'urlAnh',
+      'thumbnail',
+      'avatar',
+      'file',
+      'filename',
+      'ten_file',
+      'tenFile',
+      'public_url',
+      'publicUrl',
+      'location',
+    ];
+
+    for (final key in keys) {
+      final text = _layTextAnh(map[key]);
+      if (text.isNotEmpty) return text;
+    }
+  }
+
+  return '';
+}
+
+String _layAnhSan(Map<String, dynamic> data) {
+  final keys = [
+    'hinh_anh',
+    'hinhAnh',
+    'anh_chinh',
+    'anhChinh',
+    'url_anh',
+    'urlAnh',
+    'anh',
+    'image',
+    'image_url',
+    'imageUrl',
+    'thumbnail',
+    'avatar',
+    'url',
+    'cover',
+    'photo',
+    'photos',
+    'images',
+    'hinh_anhs',
+    'hinhAnhs',
+    'danh_sach_anh',
+    'danhSachAnh',
+    'media',
+  ];
+
+  for (final key in keys) {
+    final text = _layTextAnh(data[key]);
+    if (text.isNotEmpty) return text;
+  }
+
+  return '';
+}
+
 class San {
   final int id;
   final int sanId;
@@ -57,14 +149,7 @@ class San {
   factory San.fromJson(Map<String, dynamic> json) {
     final data = json['data'] is Map ? Map<String, dynamic>.from(json['data']) : json;
 
-    final rawAnh = data['hinh_anh'] ??
-        data['url_anh'] ??
-        data['anh_chinh'] ??
-        data['hinhAnh'] ??
-        data['avatar'] ??
-        data['url'] ??
-        data['image'] ??
-        '';
+    final rawAnh = _layAnhSan(data);
 
     final idLayDuoc = _intTuJson(data['id'] ?? data['san_id'] ?? data['sanId']);
 
@@ -78,7 +163,7 @@ class San {
       tenCoSo: '${data['ten_co_so'] ?? data['tenCoSo'] ?? ''}',
       diaChi: '${data['dia_chi'] ?? data['diaChi'] ?? data['address'] ?? ''}',
       danhMuc: '${data['danh_muc'] ?? data['ten_danh_muc'] ?? data['category'] ?? ''}',
-      hinhAnh: DuongDanApi.anh('$rawAnh'),
+      hinhAnh: DuongDanApi.anh(rawAnh),
       trangThai: _intTuJson(data['trang_thai'] ?? data['trangThai'] ?? 1),
       gia: _doubleTuJson(data['gia'] ?? data['gia_hien_tai'] ?? data['price']),
       giaThapNhat: _doubleTuJson(data['gia_thap_nhat'] ?? data['giaThapNhat'] ?? data['gia'] ?? data['price']),

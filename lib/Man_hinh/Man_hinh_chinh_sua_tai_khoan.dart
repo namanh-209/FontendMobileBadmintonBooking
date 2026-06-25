@@ -54,6 +54,89 @@ class _ManHinhChinhSuaTaiKhoanState extends State<ManHinhChinhSuaTaiKhoan> {
     return gioiTinh;
   }
 
+  DateTime? docNgaySinh(String value) {
+    var text = value.trim();
+
+    if (text.isEmpty || text == 'null') return null;
+
+    if (text.contains('T')) {
+      text = text.split('T').first;
+    }
+
+    if (text.contains('/')) {
+      final tach = text.split('/');
+
+      if (tach.length == 3) {
+        final d = int.tryParse(tach[0]);
+        final m = int.tryParse(tach[1]);
+        final y = int.tryParse(tach[2]);
+
+        if (d != null && m != null && y != null) {
+          return DateTime(y, m, d);
+        }
+      }
+    }
+
+    if (text.contains('-')) {
+      final tach = text.split('-');
+
+      if (tach.length == 3) {
+        if (tach[0].length == 4) {
+          final y = int.tryParse(tach[0]);
+          final m = int.tryParse(tach[1]);
+          final d = int.tryParse(tach[2]);
+
+          if (d != null && m != null && y != null) {
+            return DateTime(y, m, d);
+          }
+        } else {
+          final d = int.tryParse(tach[0]);
+          final m = int.tryParse(tach[1]);
+          final y = int.tryParse(tach[2]);
+
+          if (d != null && m != null && y != null) {
+            return DateTime(y, m, d);
+          }
+        }
+      }
+    }
+
+    try {
+      return DateTime.parse(text);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String hienThiNgaySinh(String value) {
+    final date = docNgaySinh(value);
+
+    if (date == null) return '';
+
+    final d = date.day.toString().padLeft(2, '0');
+    final m = date.month.toString().padLeft(2, '0');
+
+    return '$d/$m/${date.year}';
+  }
+
+  String hienThiNgaySinhTuDate(DateTime date) {
+    final d = date.day.toString().padLeft(2, '0');
+    final m = date.month.toString().padLeft(2, '0');
+
+    return '$d/$m/${date.year}';
+  }
+
+  String ngaySinhGuiApi(String value) {
+    final date = docNgaySinh(value);
+
+    if (date == null) return '';
+
+    final d = date.day.toString().padLeft(2, '0');
+    final m = date.month.toString().padLeft(2, '0');
+
+    return '${date.year}-$m-$d';
+  }
+
   bool laAnhHopLe(String path) {
     final lower = path.toLowerCase();
 
@@ -65,6 +148,8 @@ class _ManHinhChinhSuaTaiKhoanState extends State<ManHinhChinhSuaTaiKhoan> {
 
   String linkAnhHienThi(String avatar) {
     final value = avatar.trim();
+
+    if (value.isEmpty) return '';
 
     if (value.startsWith('http://') || value.startsWith('https://')) {
       return value;
@@ -115,7 +200,7 @@ class _ManHinhChinhSuaTaiKhoanState extends State<ManHinhChinhSuaTaiKhoan> {
     hoTenController.text = nguoiDung?.hoTen ?? '';
     emailController.text = nguoiDung?.email ?? '';
     soDienThoaiController.text = nguoiDung?.soDienThoai ?? '';
-    ngaySinhController.text = nguoiDung?.ngaySinh ?? '';
+    ngaySinhController.text = hienThiNgaySinh(nguoiDung?.ngaySinh ?? '');
 
     gioiTinhDangChon = chuyenGioiTinhHienThi(nguoiDung?.gioiTinh ?? '');
     avatarDangChon = nguoiDung?.avatar ?? '';
@@ -200,10 +285,11 @@ class _ManHinhChinhSuaTaiKhoanState extends State<ManHinhChinhSuaTaiKhoan> {
   }
 
   Future<void> chonNgaySinh() async {
+    final ngayDangCo = docNgaySinh(ngaySinhController.text);
+
     final DateTime? ngay = await showDatePicker(
       context: context,
-      initialDate:
-          DateTime.tryParse(ngaySinhController.text) ?? DateTime(2005, 1, 1),
+      initialDate: ngayDangCo ?? DateTime(2005, 1, 1),
       firstDate: DateTime(1950),
       lastDate: DateTime.now(),
       helpText: 'Chọn ngày sinh',
@@ -214,23 +300,30 @@ class _ManHinhChinhSuaTaiKhoanState extends State<ManHinhChinhSuaTaiKhoan> {
     if (ngay == null) return;
     if (!mounted) return;
 
-    final thang = ngay.month.toString().padLeft(2, '0');
-    final ngayTrongThang = ngay.day.toString().padLeft(2, '0');
-
     setState(() {
-      ngaySinhController.text = '${ngay.year}-$thang-$ngayTrongThang';
+      ngaySinhController.text = hienThiNgaySinhTuDate(ngay);
     });
   }
 
   Future<void> luuThayDoi() async {
     final hoTen = hoTenController.text.trim();
     final soDienThoai = soDienThoaiController.text.trim();
-    final ngaySinh = ngaySinhController.text.trim();
+    final ngaySinhText = ngaySinhController.text.trim();
+    final ngaySinh = ngaySinhGuiApi(ngaySinhText);
 
     if (hoTen.isEmpty || soDienThoai.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Vui lòng nhập họ tên và số điện thoại'),
+        ),
+      );
+      return;
+    }
+
+    if (ngaySinhText.isNotEmpty && ngaySinh.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Ngày sinh không hợp lệ'),
         ),
       );
       return;

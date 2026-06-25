@@ -133,14 +133,69 @@ class ManHinhTaiKhoan extends StatelessWidget {
     }
   }
 
-  Widget tieuDeTrang() {
-    return const Text(
-      'Tài khoản',
-      style: TextStyle(
-        fontSize: 22,
-        fontWeight: FontWeight.bold,
-        color: Colors.black,
-      ),
+  String layLinkAvatar(String avatar) {
+    final text = avatar.trim();
+
+    if (text.isEmpty) return '';
+
+    if (text.startsWith('http://') || text.startsWith('https://')) {
+      return text;
+    }
+
+    return DuongDanApi.linkAnh(text);
+  }
+
+  Widget tieuDeTrang({
+    required String tieuDe,
+    required String moTa,
+  }) {
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                tieuDe,
+                style: const TextStyle(
+                  fontSize: 25,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.black,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                moTa,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade700,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Container(
+          width: 39,
+          height: 39,
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.92),
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.10),
+                blurRadius: 9,
+                offset: const Offset(1, 4),
+              ),
+            ],
+          ),
+          child: const Icon(
+            Icons.person_rounded,
+            size: 21,
+            color: Color(0xff2454ff),
+          ),
+        ),
+      ],
     );
   }
 
@@ -151,7 +206,7 @@ class ManHinhTaiKhoan extends StatelessWidget {
         style: const TextStyle(
           fontSize: 34,
           color: Colors.white,
-          fontWeight: FontWeight.bold,
+          fontWeight: FontWeight.w900,
         ),
       ),
     );
@@ -182,7 +237,7 @@ class ManHinhTaiKhoan extends StatelessWidget {
       } else {
         noiDungAvatar = ClipOval(
           child: Image.network(
-            DuongDanApi.linkAnh(avatarText),
+            layLinkAvatar(avatarText),
             width: 92,
             height: 92,
             fit: BoxFit.cover,
@@ -215,27 +270,27 @@ class ManHinhTaiKhoan extends StatelessWidget {
               color: Colors.white,
               width: 5,
             ),
-            boxShadow: const [
+            boxShadow: [
               BoxShadow(
-                color: Colors.black12,
-                blurRadius: 10,
-                offset: Offset(2, 5),
+                color: const Color(0xff2454ff).withOpacity(0.22),
+                blurRadius: 16,
+                offset: const Offset(0, 7),
               ),
             ],
           ),
           child: noiDungAvatar,
         ),
         Positioned(
-          right: 2,
+          right: 0,
           bottom: 4,
           child: InkWell(
             onTap: () {
               chuyenChinhSua(context);
             },
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(18),
             child: Container(
-              width: 28,
-              height: 28,
+              width: 29,
+              height: 29,
               decoration: BoxDecoration(
                 color: Colors.white,
                 shape: BoxShape.circle,
@@ -243,6 +298,13 @@ class ManHinhTaiKhoan extends StatelessWidget {
                   color: const Color(0xffdbeafe),
                   width: 2,
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.14),
+                    blurRadius: 7,
+                    offset: const Offset(1, 3),
+                  ),
+                ],
               ),
               child: const Icon(
                 Icons.edit_rounded,
@@ -256,75 +318,136 @@ class ManHinhTaiKhoan extends StatelessWidget {
     );
   }
 
+  Widget nutNhanh({
+    required IconData icon,
+    required String text,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          height: 58,
+          padding: const EdgeInsets.symmetric(horizontal: 6),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.90),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: const Color(0xffdbeafe),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 18,
+                color: const Color(0xff2454ff),
+              ),
+              const SizedBox(width: 5),
+              Flexible(
+                child: Text(
+                  text,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 10.8,
+                    color: Colors.black87,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget dongThongTin({
     required IconData icon,
     required String tieuDe,
     String? giaTri,
     bool coMuiTen = false,
     Color mauIcon = const Color(0xff2454ff),
+    Color mauNenIcon = const Color(0xffe7f1ff),
     VoidCallback? onTap,
   }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
+      borderRadius: BorderRadius.circular(18),
+      child: Padding(
         padding: const EdgeInsets.symmetric(
           horizontal: 14,
-          vertical: 11,
+          vertical: 10,
         ),
         child: Row(
           children: [
             Container(
-              width: 34,
-              height: 34,
+              width: 40,
+              height: 40,
               decoration: BoxDecoration(
-                color: const Color(0xffe7f1ff),
-                borderRadius: BorderRadius.circular(12),
+                color: mauNenIcon,
+                borderRadius: BorderRadius.circular(14),
               ),
               child: Icon(
                 icon,
-                size: 18,
+                size: 19,
                 color: mauIcon,
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    tieuDe,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: giaTri == null ? 13.4 : 11.5,
-                      color:
-                          giaTri == null ? Colors.black87 : Colors.grey[600],
-                      fontWeight:
-                          giaTri == null ? FontWeight.w700 : FontWeight.w500,
-                    ),
-                  ),
-                  if (giaTri != null) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      giaTri,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+              child: giaTri == null
+                  ? Text(
+                      tieuDe,
+                      softWrap: true,
                       style: const TextStyle(
-                        fontSize: 13.3,
+                        fontSize: 13.8,
                         color: Colors.black87,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w800,
                       ),
+                    )
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          tieuDe,
+                          style: TextStyle(
+                            fontSize: 11.2,
+                            color: Colors.grey.shade600,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          giaTri,
+                          softWrap: true,
+                          style: const TextStyle(
+                            fontSize: 13.6,
+                            color: Colors.black87,
+                            fontWeight: FontWeight.w800,
+                            height: 1.25,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ],
-              ),
             ),
             if (coMuiTen)
-              const Icon(
-                Icons.chevron_right_rounded,
-                size: 24,
-                color: Colors.black38,
+              Container(
+                width: 27,
+                height: 27,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.chevron_right_rounded,
+                  size: 21,
+                  color: Colors.black45,
+                ),
               ),
           ],
         ),
@@ -335,7 +458,7 @@ class ManHinhTaiKhoan extends StatelessWidget {
   Widget gachNgang() {
     return Padding(
       padding: const EdgeInsets.only(
-        left: 60,
+        left: 66,
         right: 14,
       ),
       child: Divider(
@@ -351,13 +474,13 @@ class ManHinhTaiKhoan extends StatelessWidget {
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.95),
+        color: Colors.white.withOpacity(0.97),
         borderRadius: BorderRadius.circular(22),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: Colors.black12,
-            blurRadius: 10,
-            offset: Offset(2, 5),
+            color: Colors.black.withOpacity(0.09),
+            blurRadius: 12,
+            offset: const Offset(2, 6),
           ),
         ],
       ),
@@ -367,109 +490,267 @@ class ManHinhTaiKhoan extends StatelessWidget {
     );
   }
 
+  Widget theChuaDangNhap(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(22, 26, 22, 23),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xffffffff),
+            Color(0xffedf5ff),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.11),
+            blurRadius: 16,
+            offset: const Offset(2, 7),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 96,
+            height: 96,
+            decoration: BoxDecoration(
+              color: const Color(0xffe7f1ff),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Colors.white,
+                width: 5,
+              ),
+            ),
+            child: const Icon(
+              Icons.account_circle_rounded,
+              size: 72,
+              color: Color(0xff2454ff),
+            ),
+          ),
+          const SizedBox(height: 15),
+          const Text(
+            'Bạn chưa đăng nhập',
+            style: TextStyle(
+              fontSize: 21,
+              fontWeight: FontWeight.w900,
+              color: Colors.black,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Đăng nhập để xem hồ sơ, lịch đặt sân,\nthông báo và ưu đãi dành riêng cho bạn.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 12.7,
+              height: 1.42,
+              color: Colors.grey.shade700,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 21),
+          SizedBox(
+            width: double.infinity,
+            height: 46,
+            child: ElevatedButton(
+              onPressed: () {
+                chuyenDangNhap(context);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xff2454ff),
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+              child: const Text(
+                'Đăng nhập',
+                style: TextStyle(
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 11),
+          SizedBox(
+            width: double.infinity,
+            height: 46,
+            child: OutlinedButton(
+              onPressed: () {
+                chuyenDangKy(context);
+              },
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(
+                  color: Color(0xff2454ff),
+                  width: 1.2,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+              child: const Text(
+                'Tạo tài khoản mới',
+                style: TextStyle(
+                  color: Color(0xff2454ff),
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget manHinhChuaDangNhap(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(18, 12, 18, 105),
+      padding: const EdgeInsets.fromLTRB(18, 14, 18, 108),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          tieuDeTrang(),
+          tieuDeTrang(
+            tieuDe: 'Tài khoản',
+            moTa: 'Đăng nhập để quản lý hồ sơ của bạn',
+          ),
+          const SizedBox(height: 18),
+          theChuaDangNhap(context),
           const SizedBox(height: 16),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(20, 26, 20, 22),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.94),
-              borderRadius: BorderRadius.circular(28),
-              boxShadow: const [
-                BoxShadow(
-                  color: Colors.black12,
-                  blurRadius: 14,
-                  offset: Offset(2, 7),
-                ),
-              ],
+          nhomThongTin(
+            children: [
+              dongThongTin(
+                icon: Icons.help_outline_rounded,
+                tieuDe: 'Trợ giúp',
+                coMuiTen: true,
+              ),
+              gachNgang(),
+              dongThongTin(
+                icon: Icons.settings_rounded,
+                tieuDe: 'Cài đặt',
+                coMuiTen: true,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget theHoSoNguoiDung({
+    required BuildContext context,
+    required String hoTen,
+    required String email,
+    required String avatar,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(18, 20, 18, 16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xffffffff),
+            Color(0xffeef6ff),
+            Color(0xffdbeafe),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xff2454ff).withOpacity(0.13),
+            blurRadius: 18,
+            offset: const Offset(2, 7),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          avatarNguoiDung(
+            context: context,
+            hoTen: hoTen,
+            avatar: avatar,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            hoTen,
+            textAlign: TextAlign.center,
+            softWrap: true,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+              color: Colors.black,
             ),
-            child: Column(
+          ),
+          const SizedBox(height: 8),
+          Container(
+            constraints: const BoxConstraints(
+              maxWidth: 285,
+            ),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 11,
+              vertical: 6,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.88),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 const Icon(
-                  Icons.account_circle_rounded,
-                  size: 86,
+                  Icons.email_rounded,
+                  size: 14,
                   color: Color(0xff2454ff),
                 ),
-                const SizedBox(height: 12),
-                const Text(
-                  'Bạn chưa đăng nhập',
-                  style: TextStyle(
-                    fontSize: 21,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Đăng nhập để xem hồ sơ, lịch đặt sân,\nthông báo và ưu đãi dành riêng cho bạn.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 13,
-                    height: 1.4,
-                    color: Colors.grey.shade700,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 22),
-                SizedBox(
-                  width: double.infinity,
-                  height: 45,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      chuyenDangNhap(context);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xff2454ff),
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                    ),
-                    child: const Text(
-                      'Đăng nhập',
-                      style: TextStyle(
-                        fontSize: 14.5,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 11),
-                SizedBox(
-                  width: double.infinity,
-                  height: 45,
-                  child: OutlinedButton(
-                    onPressed: () {
-                      chuyenDangKy(context);
-                    },
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(
-                        color: Color(0xff2454ff),
-                        width: 1.1,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
-                      ),
-                    ),
-                    child: const Text(
-                      'Tạo tài khoản mới',
-                      style: TextStyle(
-                        color: Color(0xff2454ff),
-                        fontSize: 14.5,
-                        fontWeight: FontWeight.bold,
-                      ),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    email,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.black87,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
               ],
             ),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              nutNhanh(
+                icon: Icons.calendar_month_rounded,
+                text: 'Lịch đặt',
+                onTap: () {
+                  chuyenLichDatSan(context);
+                },
+              ),
+              const SizedBox(width: 8),
+              nutNhanh(
+                icon: Icons.history_rounded,
+                text: 'Lịch sử',
+                onTap: () {
+                  chuyenLichSuDatSan(context);
+                },
+              ),
+              const SizedBox(width: 8),
+              nutNhanh(
+                icon: Icons.edit_rounded,
+                text: 'Sửa hồ sơ',
+                onTap: () {
+                  chuyenChinhSua(context);
+                },
+              ),
+            ],
           ),
         ],
       ),
@@ -501,84 +782,22 @@ class ManHinhTaiKhoan extends StatelessWidget {
     final avatar = '${nguoiDung?.avatar ?? ''}';
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(18, 12, 18, 105),
+      padding: const EdgeInsets.fromLTRB(18, 14, 18, 108),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          tieuDeTrang(),
-          const SizedBox(height: 16),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(18, 20, 18, 18),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [
-                  Color(0xfffafdff),
-                  Color(0xffe8f2ff),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(28),
-              boxShadow: const [
-                BoxShadow(
-                  color: Colors.black12,
-                  blurRadius: 14,
-                  offset: Offset(2, 7),
-                ),
-              ],
-            ),
-            child: Column(
-              children: [
-                avatarNguoiDung(
-                  context: context,
-                  hoTen: hoTen,
-                  avatar: avatar,
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  hoTen,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                  ),
-                ),
-                const SizedBox(height: 7),
-                Text(
-                  email,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 12.5,
-                    color: Colors.black87,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 14),
-                OutlinedButton.icon(
-                  onPressed: () {
-                    chuyenChinhSua(context);
-                  },
-                  icon: const Icon(
-                    Icons.edit_rounded,
-                    size: 16,
-                    color: Color(0xff2454ff),
-                  ),
-                  label: const Text(
-                    'Chỉnh sửa thông tin',
-                    style: TextStyle(
-                      color: Color(0xff2454ff),
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+          tieuDeTrang(
+            tieuDe: 'Tài khoản',
+            moTa: 'Quản lý hồ sơ và lịch đặt sân',
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 15),
+          theHoSoNguoiDung(
+            context: context,
+            hoTen: hoTen,
+            email: email,
+            avatar: avatar,
+          ),
+          const SizedBox(height: 15),
           nhomThongTin(
             children: [
               dongThongTin(
@@ -610,26 +829,14 @@ class ManHinhTaiKhoan extends StatelessWidget {
           nhomThongTin(
             children: [
               dongThongTin(
-                icon: Icons.calendar_month_rounded,
-                tieuDe: 'Lịch đặt sân',
+                icon: Icons.lock_outline_rounded,
+                tieuDe: 'Đổi mật khẩu',
                 coMuiTen: true,
-                onTap: () {
-                  chuyenLichDatSan(context);
-                },
               ),
               gachNgang(),
               dongThongTin(
-                icon: Icons.history_rounded,
-                tieuDe: 'Lịch sử đặt sân',
-                coMuiTen: true,
-                onTap: () {
-                  chuyenLichSuDatSan(context);
-                },
-              ),
-              gachNgang(),
-              dongThongTin(
-                icon: Icons.notifications_none_rounded,
-                tieuDe: 'Thông báo',
+                icon: Icons.help_outline_rounded,
+                tieuDe: 'Trợ giúp',
                 coMuiTen: true,
               ),
               gachNgang(),
@@ -643,7 +850,7 @@ class ManHinhTaiKhoan extends StatelessWidget {
           const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
-            height: 44,
+            height: 46,
             child: OutlinedButton.icon(
               onPressed: () async {
                 await xuLyTaiKhoan.dangXuat();
@@ -666,17 +873,17 @@ class ManHinhTaiKhoan extends StatelessWidget {
                 style: TextStyle(
                   color: Colors.red,
                   fontSize: 14,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w900,
                 ),
               ),
               style: OutlinedButton.styleFrom(
-                backgroundColor: Colors.white.withOpacity(0.85),
+                backgroundColor: Colors.white.withOpacity(0.9),
                 side: const BorderSide(
                   color: Colors.red,
-                  width: 1,
+                  width: 1.1,
                 ),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(16),
                 ),
               ),
             ),

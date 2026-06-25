@@ -642,12 +642,21 @@ class _ManHinhThanhToanState extends State<ManHinhThanhToan> {
     return (thanhTienSauGiam(ds) * phanTramCoc / 100).roundToDouble();
   }
 
+  String linkAnhTuText(String value) {
+    final text = value.trim();
+
+    if (text.isEmpty || text.toLowerCase() == 'null') return '';
+
+    return DuongDanApi.linkAnh(text);
+  }
+
   String linkAnhCoSo() {
     final hinhAnh = widget.coSo?.hinhAnh.trim() ?? '';
+    final url = linkAnhTuText(hinhAnh);
 
-    if (hinhAnh.isEmpty) return '';
+    debugPrint('ANH CO SO THANH TOAN: $url');
 
-    return DuongDanApi.linkAnh(hinhAnh);
+    return url;
   }
 
   Future<void> moManHinhVnpay(String paymentUrl) async {
@@ -1259,7 +1268,10 @@ class _ManHinhThanhToanState extends State<ManHinhThanhToan> {
                   : Image.network(
                       url,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => anhMacDinh(),
+                      errorBuilder: (_, error, ___) {
+                        debugPrint('LOI TAI ANH THANH TOAN: $url - $error');
+                        return anhMacDinh();
+                      },
                     ),
             ),
           ),

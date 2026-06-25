@@ -71,6 +71,108 @@ List<San> _layDanhSachSan(Map<String, dynamic> data) {
   return dsSan;
 }
 
+
+String _layTextAnh(dynamic value) {
+  if (value == null) return '';
+
+  if (value is String) {
+    final text = value.trim();
+    if (text.isEmpty || text.toLowerCase() == 'null') return '';
+    return text;
+  }
+
+  if (value is List) {
+    for (final item in value) {
+      final text = _layTextAnh(item);
+      if (text.isNotEmpty) return text;
+    }
+    return '';
+  }
+
+  if (value is Map) {
+    final map = Map<String, dynamic>.from(value);
+
+    final keys = [
+      'url',
+      'secure_url',
+      'src',
+      'path',
+      'duong_dan',
+      'duongDan',
+      'link',
+      'image',
+      'image_url',
+      'imageUrl',
+      'hinh_anh',
+      'hinhAnh',
+      'anh_chinh',
+      'anhChinh',
+      'url_anh',
+      'urlAnh',
+      'thumbnail',
+      'avatar',
+      'file',
+      'filename',
+      'ten_file',
+      'tenFile',
+      'public_url',
+      'publicUrl',
+      'location',
+    ];
+
+    for (final key in keys) {
+      final text = _layTextAnh(map[key]);
+      if (text.isNotEmpty) return text;
+    }
+
+    final data = map['data'];
+    final textData = _layTextAnh(data);
+    if (textData.isNotEmpty) return textData;
+  }
+
+  return '';
+}
+
+String _layAnhCoSo(Map<String, dynamic> data) {
+  final keys = [
+    'hinh_anh',
+    'hinhAnh',
+    'anh_chinh',
+    'anhChinh',
+    'url_anh',
+    'urlAnh',
+    'anh',
+    'image',
+    'image_url',
+    'imageUrl',
+    'thumbnail',
+    'thumbnail_url',
+    'thumbnailUrl',
+    'avatar',
+    'url',
+    'cover',
+    'cover_image',
+    'coverImage',
+    'banner',
+    'photo',
+    'photos',
+    'images',
+    'hinh_anhs',
+    'hinhAnhs',
+    'danh_sach_anh',
+    'danhSachAnh',
+    'album',
+    'media',
+  ];
+
+  for (final key in keys) {
+    final text = _layTextAnh(data[key]);
+    if (text.isNotEmpty) return text;
+  }
+
+  return '';
+}
+
 int _laySoLuongSan(Map<String, dynamic> data, List<San> dsSan) {
   final cacKeySoLuong = [
     'so_luong_san',
@@ -193,17 +295,7 @@ class CoSo {
   factory CoSo.fromJson(Map<String, dynamic> json) {
     final data = _layMapDuLieu(json);
 
-    final rawAnh = data['hinh_anh'] ??
-        data['hinhAnh'] ??
-        data['anh_chinh'] ??
-        data['anhChinh'] ??
-        data['url_anh'] ??
-        data['urlAnh'] ??
-        data['avatar'] ??
-        data['url'] ??
-        data['image'] ??
-        data['thumbnail'] ??
-        '';
+    final rawAnh = _layAnhCoSo(data);
 
     final dsSan = _layDanhSachSan(data);
     final soLuongSanDocDuoc = _laySoLuongSan(data, dsSan);
@@ -234,7 +326,7 @@ class CoSo {
           '${data['tinh_thanh'] ?? data['tinhThanh'] ?? data['city'] ?? data['province'] ?? 'TP.HCM'}',
       moTa:
           '${data['mo_ta'] ?? data['moTa'] ?? data['description'] ?? data['ghi_chu'] ?? ''}',
-      hinhAnh: DuongDanApi.anh('$rawAnh'),
+      hinhAnh: DuongDanApi.anh(rawAnh),
       danhGia: _doubleTuJson(
         data['danh_gia'] ??
             data['danhGia'] ??
