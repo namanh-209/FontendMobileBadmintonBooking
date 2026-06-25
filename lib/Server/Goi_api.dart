@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 
 import '../Chung/Duong_dan_api.dart';
 
@@ -24,7 +25,6 @@ class LoiApi implements Exception {
 class GoiApi {
   static String? tokenDangNhap;
 
-  // Alias để các file cũ còn dùng GoiApi.token không bị lỗi.
   static String? get token => tokenDangNhap;
   static set token(String? value) => ganToken(value);
 
@@ -87,6 +87,28 @@ class GoiApi {
     return headers;
   }
 
+  MediaType _contentTypeTheoFile(String path) {
+    final lower = path.toLowerCase();
+
+    if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) {
+      return MediaType('image', 'jpeg');
+    }
+
+    if (lower.endsWith('.png')) {
+      return MediaType('image', 'png');
+    }
+
+    if (lower.endsWith('.webp')) {
+      return MediaType('image', 'webp');
+    }
+
+    if (lower.endsWith('.gif')) {
+      return MediaType('image', 'gif');
+    }
+
+    return MediaType('application', 'octet-stream');
+  }
+
   dynamic _decode(String text) {
     final raw = text.trim();
     if (raw.isEmpty) return null;
@@ -105,12 +127,13 @@ class GoiApi {
   }
 
   dynamic _xuLyKetQua(http.Response response) {
-    final data = _decode(utf8.decode(response.bodyBytes));
+    final body = utf8.decode(response.bodyBytes);
+    final data = _decode(body);
 
     if (kDebugMode) {
       debugPrint('API ${response.request?.method ?? ''} ${response.request?.url}');
       debugPrint('STATUS ${response.statusCode}');
-      debugPrint('BODY ${utf8.decode(response.bodyBytes)}');
+      debugPrint('BODY $body');
     }
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
@@ -204,7 +227,7 @@ class GoiApi {
     Map<String, dynamic>? query,
     String? token,
   }) async {
-    final request = http.Request('DELETE', _uri(path, query: query));
+    final request = http.Request('DELETE', _uri(path));
     request.headers.addAll(_headers(token: token));
     if (body != null) request.body = jsonEncode(body);
 
@@ -216,6 +239,7 @@ class GoiApi {
 
   Future<dynamic> getAny(List<String> paths) async {
     Object? loiCuoi;
+
     for (final path in paths) {
       try {
         return await get(path);
@@ -223,6 +247,7 @@ class GoiApi {
         loiCuoi = e;
       }
     }
+
     if (loiCuoi is LoiApi) throw loiCuoi;
     throw LoiApi('Không gọi được API');
   }
@@ -232,6 +257,7 @@ class GoiApi {
     Map<String, dynamic>? body,
   }) async {
     Object? loiCuoi;
+
     for (final path in paths) {
       try {
         return await post(path, body: body);
@@ -239,6 +265,7 @@ class GoiApi {
         loiCuoi = e;
       }
     }
+
     if (loiCuoi is LoiApi) throw loiCuoi;
     throw LoiApi('Không gọi được API');
   }
@@ -248,6 +275,7 @@ class GoiApi {
     Map<String, dynamic>? body,
   }) async {
     Object? loiCuoi;
+
     for (final path in paths) {
       try {
         return await patch(path, body: body);
@@ -255,6 +283,7 @@ class GoiApi {
         loiCuoi = e;
       }
     }
+
     if (loiCuoi is LoiApi) throw loiCuoi;
     throw LoiApi('Không gọi được API');
   }
@@ -272,13 +301,22 @@ class GoiApi {
     for (final entry in files.entries) {
       final value = entry.value.trim();
       if (value.isEmpty) continue;
+
       final file = File(value);
       if (!file.existsSync()) continue;
-      request.files.add(await http.MultipartFile.fromPath(entry.key, value));
+
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          entry.key,
+          value,
+          contentType: _contentTypeTheoFile(value),
+        ),
+      );
     }
 
     final streamed = await request.send().timeout(timeout);
     final response = await http.Response.fromStream(streamed);
+
     return _xuLyKetQua(response);
   }
 
@@ -295,13 +333,22 @@ class GoiApi {
     for (final entry in files.entries) {
       final value = entry.value.trim();
       if (value.isEmpty) continue;
+
       final file = File(value);
       if (!file.existsSync()) continue;
-      request.files.add(await http.MultipartFile.fromPath(entry.key, value));
+
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          entry.key,
+          value,
+          contentType: _contentTypeTheoFile(value),
+        ),
+      );
     }
 
     final streamed = await request.send().timeout(timeout);
     final response = await http.Response.fromStream(streamed);
+
     return _xuLyKetQua(response);
   }
 }

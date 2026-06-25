@@ -4,13 +4,146 @@ import 'San.dart';
 double _doubleTuJson(dynamic value) {
   if (value == null) return 0;
   if (value is num) return value.toDouble();
-  return double.tryParse('$value') ?? 0;
+
+  var text = '$value'
+      .replaceAll('đ', '')
+      .replaceAll(' ', '')
+      .trim();
+
+  if (text.contains('.') && text.contains(',')) {
+    text = text.replaceAll('.', '').replaceAll(',', '.');
+  } else if (RegExp(r'^\d{1,3}(\.\d{3})+$').hasMatch(text)) {
+    text = text.replaceAll('.', '');
+  } else {
+    text = text.replaceAll(',', '.');
+  }
+
+  return double.tryParse(text) ?? 0;
 }
 
 int _intTuJson(dynamic value) {
   if (value == null) return 0;
   if (value is num) return value.toInt();
-  return int.tryParse('$value') ?? 0;
+
+  final text = '$value'.trim();
+  return int.tryParse(text) ?? double.tryParse(text)?.toInt() ?? 0;
+}
+
+Map<String, dynamic> _layMapDuLieu(Map<String, dynamic> json) {
+  final data = json['data'];
+
+  if (data is Map) {
+    return Map<String, dynamic>.from(data);
+  }
+
+  return json;
+}
+
+List<San> _layDanhSachSan(Map<String, dynamic> data) {
+  final rawSan = data['danh_sach_san'] ??
+      data['danhSachSan'] ??
+      data['ds_san'] ??
+      data['dsSan'] ??
+      data['san'] ??
+      data['sans'] ??
+      data['san_con'] ??
+      data['sanCon'] ??
+      data['san_bai'] ??
+      data['sanBai'] ??
+      data['courts'] ??
+      data['court'] ??
+      data['fields'];
+
+  final dsSan = <San>[];
+
+  if (rawSan is List) {
+    for (final item in rawSan) {
+      if (item is Map) {
+        dsSan.add(
+          San.fromJson(
+            Map<String, dynamic>.from(item),
+          ),
+        );
+      }
+    }
+  }
+
+  return dsSan;
+}
+
+int _laySoLuongSan(Map<String, dynamic> data, List<San> dsSan) {
+  final cacKeySoLuong = [
+    'so_luong_san',
+    'soLuongSan',
+    'so_san',
+    'soSan',
+    'tong_san',
+    'tongSan',
+    'tong_so_san',
+    'tongSoSan',
+    'sl_san',
+    'slSan',
+    'soluong_san',
+    'soluongSan',
+    'san_count',
+    'sanCount',
+    'count_san',
+    'countSan',
+    'so_luong_san_con',
+    'soLuongSanCon',
+    'tong_san_con',
+    'tongSanCon',
+    'court_count',
+    'courtCount',
+    'courts_count',
+    'courtsCount',
+    'total_courts',
+    'totalCourts',
+    'number_of_courts',
+    'numberOfCourts',
+  ];
+
+  for (final key in cacKeySoLuong) {
+    final value = data[key];
+
+    if (value is List) {
+      if (value.isNotEmpty) return value.length;
+      continue;
+    }
+
+    final soLuong = _intTuJson(value);
+    if (soLuong > 0) return soLuong;
+  }
+
+  final cacKeyDanhSachSan = [
+    'danh_sach_san',
+    'danhSachSan',
+    'ds_san',
+    'dsSan',
+    'san',
+    'sans',
+    'san_con',
+    'sanCon',
+    'san_bai',
+    'sanBai',
+    'courts',
+    'court',
+    'fields',
+  ];
+
+  for (final key in cacKeyDanhSachSan) {
+    final value = data[key];
+
+    if (value is List && value.isNotEmpty) {
+      return value.length;
+    }
+  }
+
+  if (dsSan.isNotEmpty) {
+    return dsSan.length;
+  }
+
+  return 0;
 }
 
 class CoSo {
@@ -58,45 +191,101 @@ class CoSo {
   bool get dangHoatDong => trangThai == 1 && trangThaiDuyet == 1;
 
   factory CoSo.fromJson(Map<String, dynamic> json) {
-    final data = json['data'] is Map ? Map<String, dynamic>.from(json['data']) : json;
+    final data = _layMapDuLieu(json);
 
     final rawAnh = data['hinh_anh'] ??
         data['hinhAnh'] ??
         data['anh_chinh'] ??
+        data['anhChinh'] ??
         data['url_anh'] ??
+        data['urlAnh'] ??
         data['avatar'] ??
         data['url'] ??
         data['image'] ??
+        data['thumbnail'] ??
         '';
 
-    final rawSan = data['danh_sach_san'] ?? data['san'] ?? data['ds_san'] ?? data['danhSachSan'];
-    final dsSan = <San>[];
-
-    if (rawSan is List) {
-      for (final item in rawSan) {
-        if (item is Map) {
-          dsSan.add(San.fromJson(Map<String, dynamic>.from(item)));
-        }
-      }
-    }
+    final dsSan = _layDanhSachSan(data);
+    final soLuongSanDocDuoc = _laySoLuongSan(data, dsSan);
 
     return CoSo(
-      id: _intTuJson(data['id'] ?? data['co_so_id'] ?? data['coSoId']),
-      chuSoId: _intTuJson(data['chu_so_id'] ?? data['chuSoId']),
-      ten: '${data['ten'] ?? data['ten_co_so'] ?? data['tenCoSo'] ?? data['name'] ?? 'Sân cầu lông'}',
-      diaChi: '${data['dia_chi'] ?? data['diaChi'] ?? data['address'] ?? ''}',
-      phuongXa: '${data['phuong_xa'] ?? data['phuongXa'] ?? data['ward'] ?? ''}',
-      tinhThanh: '${data['tinh_thanh'] ?? data['tinhThanh'] ?? data['city'] ?? data['province'] ?? 'TP.HCM'}',
-      moTa: '${data['mo_ta'] ?? data['moTa'] ?? data['description'] ?? ''}',
+      id: _intTuJson(
+        data['id'] ??
+            data['co_so_id'] ??
+            data['coSoId'] ??
+            data['coso_id'] ??
+            data['cosoId'],
+      ),
+      chuSoId: _intTuJson(
+        data['chu_so_id'] ??
+            data['chuSoId'] ??
+            data['user_id'] ??
+            data['userId'] ??
+            data['owner_id'] ??
+            data['ownerId'],
+      ),
+      ten:
+          '${data['ten'] ?? data['ten_co_so'] ?? data['tenCoSo'] ?? data['name'] ?? data['title'] ?? 'Sân cầu lông'}',
+      diaChi:
+          '${data['dia_chi'] ?? data['diaChi'] ?? data['address'] ?? data['location'] ?? ''}',
+      phuongXa:
+          '${data['phuong_xa'] ?? data['phuongXa'] ?? data['ward'] ?? ''}',
+      tinhThanh:
+          '${data['tinh_thanh'] ?? data['tinhThanh'] ?? data['city'] ?? data['province'] ?? 'TP.HCM'}',
+      moTa:
+          '${data['mo_ta'] ?? data['moTa'] ?? data['description'] ?? data['ghi_chu'] ?? ''}',
       hinhAnh: DuongDanApi.anh('$rawAnh'),
-      danhGia: _doubleTuJson(data['danh_gia'] ?? data['danhGia'] ?? data['diem_danh_gia'] ?? data['rating']),
-      giaThapNhat: _doubleTuJson(data['gia_thap_nhat'] ?? data['giaThapNhat'] ?? data['gia'] ?? data['price']),
-      viDo: _doubleTuJson(data['vi_do'] ?? data['viDo'] ?? data['lat'] ?? data['latitude']),
-      kinhDo: _doubleTuJson(data['kinh_do'] ?? data['kinhDo'] ?? data['lng'] ?? data['longitude']),
-      trangThai: _intTuJson(data['trang_thai'] ?? data['trangThai'] ?? 1),
-      trangThaiDuyet: _intTuJson(data['trang_thai_duyet'] ?? data['trangThaiDuyet'] ?? 1),
-      phanTramCoc: _doubleTuJson(data['phan_tram_coc'] ?? data['phanTramCoc'] ?? 30),
-      soLuongSan: _intTuJson(data['so_luong_san'] ?? data['soLuongSan'] ?? data['tong_san'] ?? dsSan.length),
+      danhGia: _doubleTuJson(
+        data['danh_gia'] ??
+            data['danhGia'] ??
+            data['diem_danh_gia'] ??
+            data['diemDanhGia'] ??
+            data['rating'] ??
+            data['rate'],
+      ),
+      giaThapNhat: _doubleTuJson(
+        data['gia_thap_nhat'] ??
+            data['giaThapNhat'] ??
+            data['gia'] ??
+            data['price'] ??
+            data['min_price'] ??
+            data['minPrice'] ??
+            data['gia_san'] ??
+            data['giaSan'],
+      ),
+      viDo: _doubleTuJson(
+        data['vi_do'] ??
+            data['viDo'] ??
+            data['lat'] ??
+            data['latitude'],
+      ),
+      kinhDo: _doubleTuJson(
+        data['kinh_do'] ??
+            data['kinhDo'] ??
+            data['lng'] ??
+            data['longitude'],
+      ),
+      trangThai: _intTuJson(
+        data['trang_thai'] ??
+            data['trangThai'] ??
+            data['status'] ??
+            1,
+      ),
+      trangThaiDuyet: _intTuJson(
+        data['trang_thai_duyet'] ??
+            data['trangThaiDuyet'] ??
+            data['duyet'] ??
+            data['approved'] ??
+            1,
+      ),
+      phanTramCoc: _doubleTuJson(
+        data['phan_tram_coc'] ??
+            data['phanTramCoc'] ??
+            data['deposit_percent'] ??
+            data['depositPercent'] ??
+            30,
+      ),
+      soLuongSan: soLuongSanDocDuoc,
       danhSachSan: dsSan,
     );
   }
@@ -166,14 +355,27 @@ class CoSo {
 
   static List<CoSo> listFrom(dynamic data) {
     final list = data is Map
-        ? (data['data'] ?? data['co_so'] ?? data['coSo'] ?? data['items'] ?? data['rows'] ?? [])
+        ? (data['data'] ??
+            data['co_so'] ??
+            data['coSo'] ??
+            data['coso'] ??
+            data['items'] ??
+            data['rows'] ??
+            data['results'] ??
+            data['facilities'] ??
+            data['san'] ??
+            [])
         : data;
 
     if (list is! List) return [];
 
     return list
         .whereType<Map>()
-        .map((e) => CoSo.fromJson(Map<String, dynamic>.from(e)))
+        .map(
+          (e) => CoSo.fromJson(
+            Map<String, dynamic>.from(e),
+          ),
+        )
         .toList();
   }
 }

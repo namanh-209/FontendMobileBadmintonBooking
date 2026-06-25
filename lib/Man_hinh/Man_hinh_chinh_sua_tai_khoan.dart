@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
@@ -34,14 +35,75 @@ class _ManHinhChinhSuaTaiKhoanState extends State<ManHinhChinhSuaTaiKhoan> {
     final text = gioiTinh.trim().toLowerCase();
 
     if (text == '1' || text == 'nam' || text == 'male') return 'Nam';
-    if (text == '0' || text == '2' || text == 'nữ' || text == 'nu' || text == 'female') {
+
+    if (text == '0' ||
+        text == '2' ||
+        text == 'nữ' ||
+        text == 'nu' ||
+        text == 'female') {
       return 'Nữ';
     }
-    if (text == '3' || text == 'khác' || text == 'khac' || text == 'other') {
+
+    if (text == '3' ||
+        text == 'khác' ||
+        text == 'khac' ||
+        text == 'other') {
       return 'Khác';
     }
 
     return gioiTinh;
+  }
+
+  bool laAnhHopLe(String path) {
+    final lower = path.toLowerCase();
+
+    return lower.endsWith('.jpg') ||
+        lower.endsWith('.jpeg') ||
+        lower.endsWith('.png') ||
+        lower.endsWith('.webp');
+  }
+
+  String linkAnhHienThi(String avatar) {
+    final value = avatar.trim();
+
+    if (value.startsWith('http://') || value.startsWith('https://')) {
+      return value;
+    }
+
+    return DuongDanApi.linkAnh(value);
+  }
+
+  Future<String> doiWebpSangJpgNeuCan(String path) async {
+    final lower = path.toLowerCase();
+
+    if (!lower.endsWith('.webp')) {
+      return path;
+    }
+
+    final file = File(path);
+
+    if (!await file.exists()) {
+      throw Exception('Không tìm thấy ảnh WEBP');
+    }
+
+    final bytes = await file.readAsBytes();
+    final image = img.decodeImage(bytes);
+
+    if (image == null) {
+      throw Exception('Không đọc được ảnh WEBP');
+    }
+
+    final jpgBytes = img.encodeJpg(
+      image,
+      quality: 90,
+    );
+
+    final jpgPath = '${path.substring(0, path.length - 5)}.jpg';
+    final jpgFile = File(jpgPath);
+
+    await jpgFile.writeAsBytes(jpgBytes);
+
+    return jpgPath;
   }
 
   @override
@@ -78,14 +140,27 @@ class _ManHinhChinhSuaTaiKhoanState extends State<ManHinhChinhSuaTaiKhoan> {
     try {
       final XFile? anh = await imagePicker.pickImage(
         source: ImageSource.gallery,
-        imageQuality: 80,
+        imageQuality: 90,
       );
 
       if (!mounted) return;
       if (anh == null) return;
 
+      if (!laAnhHopLe(anh.path)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Chỉ hỗ trợ ảnh JPG, PNG hoặc WEBP'),
+          ),
+        );
+        return;
+      }
+
+      final pathSauKhiXuLy = await doiWebpSangJpgNeuCan(anh.path);
+
+      if (!mounted) return;
+
       setState(() {
-        avatarDangChon = anh.path;
+        avatarDangChon = pathSauKhiXuLy;
       });
     } on PlatformException catch (e) {
       debugPrint('Lỗi chọn ảnh: $e');
@@ -109,8 +184,8 @@ class _ManHinhChinhSuaTaiKhoanState extends State<ManHinhChinhSuaTaiKhoan> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Không chọn được ảnh'),
+        SnackBar(
+          content: Text('$e'),
         ),
       );
     } finally {
@@ -197,16 +272,6 @@ class _ManHinhChinhSuaTaiKhoanState extends State<ManHinhChinhSuaTaiKhoan> {
 
     if (avatar.isEmpty) {
       noiDung = iconAvatarMacDinh();
-    } else if (avatar.startsWith('http://') || avatar.startsWith('https://')) {
-      noiDung = Image.network(
-        DuongDanApi.linkAnh(avatar),
-        width: 96,
-        height: 96,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) {
-          return iconAvatarMacDinh();
-        },
-      );
     } else if (File(avatar).existsSync()) {
       noiDung = Image.file(
         File(avatar),
@@ -219,7 +284,7 @@ class _ManHinhChinhSuaTaiKhoanState extends State<ManHinhChinhSuaTaiKhoan> {
       );
     } else {
       noiDung = Image.network(
-        DuongDanApi.linkAnh(avatar),
+        linkAnhHienThi(avatar),
         width: 96,
         height: 96,
         fit: BoxFit.cover,

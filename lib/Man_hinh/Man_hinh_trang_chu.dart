@@ -2,10 +2,9 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-
-import '../Chung/Duong_dan_api.dart';
 import 'package:provider/provider.dart';
 
+import '../Chung/Duong_dan_api.dart';
 import '../Chung/Duong_dan_anh.dart';
 import '../Dung_lai/Thanh_duoi.dart';
 import '../Mau_du_lieu/Co_so.dart';
@@ -26,6 +25,7 @@ class ManHinhTrangChu extends StatefulWidget {
 
 class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
   int bannerDangChon = 0;
+  String tinhThanhDangChon = 'Tất cả';
 
   final PageController bannerController = PageController();
   Timer? timerBanner;
@@ -87,6 +87,149 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
           RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
           (Match m) => '${m[1]}.',
         )}đ';
+  }
+
+  String hienThiSoSan(CoSo coSo) {
+    final soSan = coSo.soLuongSan > 0
+        ? coSo.soLuongSan
+        : coSo.danhSachSan.length;
+
+    return '$soSan sân';
+  }
+
+  String tenTinhHienThi(String tinh) {
+    final text = tinh.trim();
+
+    if (text.isEmpty || text == 'Tất cả') {
+      return 'Tất cả';
+    }
+
+    return text;
+  }
+
+  List<String> layDanhSachTinhThanh(List<CoSo> danhSachCoSo) {
+    final setTinh = <String>{};
+
+    for (final coSo in danhSachCoSo) {
+      final tinh = coSo.tinhThanh.trim();
+
+      if (tinh.isNotEmpty) {
+        setTinh.add(tinh);
+      }
+    }
+
+    final list = setTinh.toList();
+    list.sort();
+
+    return list;
+  }
+
+  List<CoSo> locCoSoTheoTinh(List<CoSo> danhSachCoSo) {
+    if (tinhThanhDangChon == 'Tất cả') {
+      return danhSachCoSo;
+    }
+
+    return danhSachCoSo.where((coSo) {
+      return coSo.tinhThanh.trim() == tinhThanhDangChon;
+    }).toList();
+  }
+
+  void moChonTinhThanh(List<CoSo> danhSachCoSo) {
+    final danhSachTinh = layDanhSachTinhThanh(danhSachCoSo);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(
+              top: Radius.circular(22),
+            ),
+          ),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 10),
+                Container(
+                  width: 42,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                const Text(
+                  'Chọn tỉnh/thành',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Colors.black,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                ListTile(
+                  leading: Icon(
+                    tinhThanhDangChon == 'Tất cả'
+                        ? Icons.radio_button_checked
+                        : Icons.radio_button_off,
+                    color: const Color(0xff2454ff),
+                  ),
+                  title: const Text(
+                    'Tất cả khu vực',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  onTap: () {
+                    setState(() {
+                      tinhThanhDangChon = 'Tất cả';
+                    });
+                    Navigator.pop(context);
+                  },
+                ),
+                Flexible(
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    padding: const EdgeInsets.only(bottom: 12),
+                    itemCount: danhSachTinh.length,
+                    itemBuilder: (context, index) {
+                      final tinh = danhSachTinh[index];
+                      final dangChon = tinhThanhDangChon == tinh;
+
+                      return ListTile(
+                        leading: Icon(
+                          dangChon
+                              ? Icons.radio_button_checked
+                              : Icons.radio_button_off,
+                          color: const Color(0xff2454ff),
+                        ),
+                        title: Text(
+                          tinh,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        onTap: () {
+                          setState(() {
+                            tinhThanhDangChon = tinh;
+                          });
+                          Navigator.pop(context);
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   void chuyenChiTietCoSo(CoSo coSo) {
@@ -297,6 +440,60 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
     );
   }
 
+  Widget nutChonTinhThanh(List<CoSo> danhSachCoSo) {
+    final coTinh = layDanhSachTinhThanh(danhSachCoSo).isNotEmpty;
+    final ten = tenTinhHienThi(tinhThanhDangChon);
+
+    return InkWell(
+      onTap: coTinh
+          ? () {
+              moChonTinhThanh(danhSachCoSo);
+            }
+          : null,
+      borderRadius: BorderRadius.circular(17),
+      child: Container(
+        height: 32,
+        constraints: const BoxConstraints(
+          maxWidth: 165,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 9),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.85),
+          borderRadius: BorderRadius.circular(17),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.location_on,
+              size: 16,
+              color: Colors.black87,
+            ),
+            const SizedBox(width: 3),
+            Flexible(
+              child: Text(
+                ten,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.black87,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const SizedBox(width: 1),
+            const Icon(
+              Icons.keyboard_arrow_down,
+              size: 17,
+              color: Colors.black87,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget bannerVoucher() {
     final List<String> banners = [
       DuongDanAnh.banner1,
@@ -499,7 +696,7 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        '${coSo.soLuongSan} sân',
+                        hienThiSoSan(coSo),
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 10.5,
@@ -714,7 +911,24 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
       );
     }
 
-    final danhSachHienThi = xuLiCoSo.danhSachCoSo;
+    final danhSachHienThi = locCoSoTheoTinh(xuLiCoSo.danhSachCoSo);
+
+    if (danhSachHienThi.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 35),
+        child: Center(
+          child: Text(
+            'Không có sân ở ${tenTinhHienThi(tinhThanhDangChon)}',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 14,
+              color: Colors.black87,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      );
+    }
 
     return ListView.builder(
       shrinkWrap: true,
@@ -792,39 +1006,7 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
                                 ],
                               ),
                             ),
-                            Container(
-                              height: 32,
-                              padding: const EdgeInsets.symmetric(horizontal: 9),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.85),
-                                borderRadius: BorderRadius.circular(17),
-                              ),
-                              child: const Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.location_on,
-                                    size: 16,
-                                    color: Colors.black87,
-                                  ),
-                                  SizedBox(width: 3),
-                                  Text(
-                                    'TP. Hồ Chí Minh',
-                                    style: TextStyle(
-                                      color: Colors.black87,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  SizedBox(width: 1),
-                                  Icon(
-                                    Icons.keyboard_arrow_down,
-                                    size: 17,
-                                    color: Colors.black87,
-                                  ),
-                                ],
-                              ),
-                            ),
+                            nutChonTinhThanh(xuLiCoSo.danhSachCoSo),
                           ],
                         ),
                         const SizedBox(height: 10),
@@ -845,9 +1027,11 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
-                              'Gợi ý cho bạn',
-                              style: TextStyle(
+                            Text(
+                              tinhThanhDangChon == 'Tất cả'
+                                  ? 'Gợi ý cho bạn'
+                                  : 'Sân ở ${tenTinhHienThi(tinhThanhDangChon)}',
+                              style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 15,
                                 color: Colors.black,
