@@ -130,9 +130,8 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
   }
 
   String hienThiSoSan(CoSo coSo) {
-    final soSan = coSo.soLuongSan > 0
-        ? coSo.soLuongSan
-        : coSo.danhSachSan.length;
+    final soSan =
+        coSo.soLuongSan > 0 ? coSo.soLuongSan : coSo.danhSachSan.length;
 
     return '$soSan sân';
   }
@@ -541,28 +540,34 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
                           borderRadius: BorderRadius.circular(99),
                         ),
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 12),
                       const Text(
                         'Bộ lọc sân',
                         style: TextStyle(
-                          fontSize: 18,
+                          fontSize: 16,
                           color: Colors.black,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 8),
                       SwitchListTile(
+                        dense: true,
+                        visualDensity: VisualDensity.compact,
                         contentPadding: EdgeInsets.zero,
                         value: tamConSan,
                         activeColor: const Color(0xff2454ff),
                         title: const Text(
                           'Chỉ hiện sân còn sân',
                           style: TextStyle(
+                            fontSize: 12.8,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
                         subtitle: const Text(
                           'Ẩn các cơ sở không có số sân',
+                          style: TextStyle(
+                            fontSize: 10.5,
+                          ),
                         ),
                         onChanged: (value) {
                           setModalState(() {
@@ -571,17 +576,23 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
                         },
                       ),
                       SwitchListTile(
+                        dense: true,
+                        visualDensity: VisualDensity.compact,
                         contentPadding: EdgeInsets.zero,
                         value: tamCoGia,
                         activeColor: const Color(0xff2454ff),
                         title: const Text(
                           'Chỉ hiện sân có giá',
                           style: TextStyle(
+                            fontSize: 12.8,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
                         subtitle: const Text(
                           'Ẩn các cơ sở chưa có giá',
+                          style: TextStyle(
+                            fontSize: 10.5,
+                          ),
                         ),
                         onChanged: (value) {
                           setModalState(() {
@@ -593,50 +604,58 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
                       Row(
                         children: [
                           Expanded(
-                            child: OutlinedButton(
-                              onPressed: () {
-                                xoaBoLocTrongNutLoc();
-                                Navigator.pop(context);
-                              },
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: Colors.black87,
-                                side: BorderSide(
-                                  color: Colors.grey.shade300,
+                            child: SizedBox(
+                              height: 39,
+                              child: OutlinedButton(
+                                onPressed: () {
+                                  xoaBoLocTrongNutLoc();
+                                  Navigator.pop(context);
+                                },
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.black87,
+                                  side: BorderSide(
+                                    color: Colors.grey.shade300,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
                                 ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                              child: const Text(
-                                'Xóa lọc',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w800,
+                                child: const Text(
+                                  'Xóa lọc',
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w800,
+                                  ),
                                 ),
                               ),
                             ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
-                            child: ElevatedButton(
-                              onPressed: () {
-                                setState(() {
-                                  chiHienConSan = tamConSan;
-                                  chiHienCoGia = tamCoGia;
-                                });
-                                Navigator.pop(context);
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xff2454ff),
-                                foregroundColor: Colors.white,
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                            child: SizedBox(
+                              height: 39,
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  setState(() {
+                                    chiHienConSan = tamConSan;
+                                    chiHienCoGia = tamCoGia;
+                                  });
+                                  Navigator.pop(context);
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xff2454ff),
+                                  foregroundColor: Colors.white,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
                                 ),
-                              ),
-                              child: const Text(
-                                'Áp dụng',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w900,
+                                child: const Text(
+                                  'Áp dụng',
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w900,
+                                  ),
                                 ),
                               ),
                             ),
@@ -665,6 +684,7 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
 
       return ListTile(
         dense: true,
+        visualDensity: VisualDensity.compact,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 18,
           vertical: 0,
@@ -672,14 +692,15 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
         leading: Icon(
           dangChon ? Icons.radio_button_checked : Icons.radio_button_off,
           color: const Color(0xff2454ff),
+          size: 19,
         ),
         title: Text(
           title,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w900,
+            fontSize: 12.8,
+            fontWeight: FontWeight.w800,
           ),
         ),
         subtitle: Text(
@@ -687,7 +708,7 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
-            fontSize: 11.5,
+            fontSize: 10.4,
             color: Colors.grey.shade600,
             fontWeight: FontWeight.w500,
           ),
@@ -695,7 +716,7 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
         trailing: Icon(
           icon,
           color: Colors.black54,
-          size: 21,
+          size: 18,
         ),
         onTap: () {
           setState(() {
@@ -712,9 +733,9 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
       backgroundColor: Colors.transparent,
       builder: (_) {
         return DraggableScrollableSheet(
-          initialChildSize: 0.58,
-          minChildSize: 0.38,
-          maxChildSize: 0.82,
+          initialChildSize: 0.50,
+          minChildSize: 0.35,
+          maxChildSize: 0.75,
           builder: (context, scrollController) {
             return Container(
               decoration: const BoxDecoration(
@@ -740,18 +761,18 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 12),
                     const Center(
                       child: Text(
                         'Sắp xếp sân',
                         style: TextStyle(
-                          fontSize: 18,
+                          fontSize: 16,
                           color: Colors.black,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     itemSapXep(
                       value: 'mac_dinh',
                       icon: Icons.restart_alt_rounded,
@@ -787,104 +808,6 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
               ),
             );
           },
-        );
-      },
-    );
-  }
-
-  void moChonTinhThanh(List<CoSo> danhSachCoSo) {
-    final danhSachTinh = layDanhSachTinhThanh(danhSachCoSo);
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (_) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(
-              top: Radius.circular(22),
-            ),
-          ),
-          child: SafeArea(
-            top: false,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const SizedBox(height: 10),
-                Container(
-                  width: 42,
-                  height: 5,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(99),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                const Text(
-                  'Chọn tỉnh/thành',
-                  style: TextStyle(
-                    fontSize: 18,
-                    color: Colors.black,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                ListTile(
-                  leading: Icon(
-                    tinhThanhDangChon == 'Tất cả'
-                        ? Icons.radio_button_checked
-                        : Icons.radio_button_off,
-                    color: const Color(0xff2454ff),
-                  ),
-                  title: const Text(
-                    'Tất cả khu vực',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  onTap: () {
-                    setState(() {
-                      tinhThanhDangChon = 'Tất cả';
-                    });
-                    Navigator.pop(context);
-                  },
-                ),
-                Flexible(
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    padding: const EdgeInsets.only(bottom: 12),
-                    itemCount: danhSachTinh.length,
-                    itemBuilder: (context, index) {
-                      final tinh = danhSachTinh[index];
-                      final dangChon = tinhThanhDangChon == tinh;
-
-                      return ListTile(
-                        leading: Icon(
-                          dangChon
-                              ? Icons.radio_button_checked
-                              : Icons.radio_button_off,
-                          color: const Color(0xff2454ff),
-                        ),
-                        title: Text(
-                          tinh,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        onTap: () {
-                          setState(() {
-                            tinhThanhDangChon = tinh;
-                          });
-                          Navigator.pop(context);
-                        },
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
         );
       },
     );
@@ -1170,16 +1093,64 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
   }
 
   Widget nutChonTinhThanh(List<CoSo> danhSachCoSo) {
-    final coTinh = layDanhSachTinhThanh(danhSachCoSo).isNotEmpty;
+    final danhSachTinh = layDanhSachTinhThanh(danhSachCoSo);
+    final danhSachHienThi = ['Tất cả', ...danhSachTinh];
     final ten = tenTinhHienThi(tinhThanhDangChon);
 
-    return InkWell(
-      onTap: coTinh
-          ? () {
-              moChonTinhThanh(danhSachCoSo);
-            }
-          : null,
-      borderRadius: BorderRadius.circular(17),
+    return PopupMenuButton<String>(
+      tooltip: 'Chọn tỉnh/thành',
+      color: Colors.white,
+      elevation: 8,
+      position: PopupMenuPosition.under,
+      offset: const Offset(0, 6),
+      constraints: const BoxConstraints(
+        minWidth: 170,
+        maxWidth: 220,
+        maxHeight: 310,
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+      ),
+      onSelected: (value) {
+        setState(() {
+          tinhThanhDangChon = value;
+        });
+      },
+      itemBuilder: (context) {
+        return danhSachHienThi.map((tinh) {
+          final dangChon = tinhThanhDangChon == tinh;
+          final tenHienThi = tinh == 'Tất cả' ? 'Tất cả khu vực' : tinh;
+
+          return PopupMenuItem<String>(
+            value: tinh,
+            height: 36,
+            child: Row(
+              children: [
+                Icon(
+                  dangChon
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_off,
+                  color: const Color(0xff2454ff),
+                  size: 17,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    tenHienThi,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: dangChon ? FontWeight.w900 : FontWeight.w700,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }).toList();
+      },
       child: Container(
         height: 32,
         constraints: const BoxConstraints(

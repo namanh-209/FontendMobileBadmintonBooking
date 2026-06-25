@@ -10,6 +10,7 @@ import '../Xu_li/Xu_li_tai_khoan.dart';
 import 'Man_hinh_chinh_sua_tai_khoan.dart';
 import 'Man_hinh_dang_ki.dart';
 import 'Man_hinh_dang_nhap.dart';
+import 'Man_hinh_dat_lai_mk.dart';
 import 'Man_hinh_lich_dat_san.dart';
 import 'Man_hinh_lich_su_dat_san.dart';
 
@@ -45,6 +46,22 @@ class ManHinhTaiKhoan extends StatelessWidget {
     );
   }
 
+void chuyenDoiMatKhau(BuildContext context) {
+  final nguoiDung = context.read<XuLiTaiKhoan>().nguoiDung;
+
+  final taiKhoan = '${nguoiDung?.email ?? ''}'.trim().isNotEmpty
+      ? '${nguoiDung?.email}'
+      : '${nguoiDung?.soDienThoai ?? ''}';
+
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => ManHinhDatLaiMatKhau(
+        taiKhoan: taiKhoan,
+      ),
+    ),
+  );
+}
   void chuyenLichDatSan(BuildContext context) {
     Navigator.push(
       context,
@@ -847,6 +864,9 @@ class ManHinhTaiKhoan extends StatelessWidget {
                 icon: Icons.lock_outline_rounded,
                 tieuDe: 'Đổi mật khẩu',
                 coMuiTen: true,
+                onTap: () {
+                  chuyenDoiMatKhau(context);
+                },
               ),
               gachNgang(),
               dongThongTin(
