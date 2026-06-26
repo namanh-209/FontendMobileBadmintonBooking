@@ -31,6 +31,10 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
   String sapXepDangChon = 'mac_dinh';
   String tuKhoaTimKiem = '';
 
+  String loaiSanDangChon = 'tat_ca';
+  double? giaTuDangChon;
+  double? giaDenDangChon;
+
   DateTime? ngayDangChon;
   TimeOfDay? gioDangChon;
 
@@ -147,9 +151,13 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
   }
 
   String tenNutLoc() {
-    if (chiHienConSan && chiHienCoGia) return 'Đã lọc';
-    if (chiHienConSan) return 'Còn sân';
-    if (chiHienCoGia) return 'Có giá';
+    if (chiHienConSan ||
+        chiHienCoGia ||
+        loaiSanDangChon != 'tat_ca' ||
+        giaTuDangChon != null ||
+        giaDenDangChon != null) {
+      return 'Đã lọc';
+    }
 
     return 'Lọc';
   }
@@ -247,6 +255,105 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
 
   bool coSoCoGia(CoSo coSo) {
     return coSo.giaThapNhat > 0;
+  }
+
+  double? docGiaTien(String value) {
+    final text = value
+        .trim()
+        .replaceAll('.', '')
+        .replaceAll(',', '')
+        .replaceAll('đ', '')
+        .replaceAll(' ', '');
+
+    if (text.isEmpty) return null;
+
+    return double.tryParse(text);
+  }
+
+  String layThongTinLoaiSan(dynamic san) {
+    final getters = <String Function()>[
+      () => '${san.tenDanhMuc}',
+      () => '${san.ten_danh_muc}',
+      () => '${san.loaiSan}',
+      () => '${san.loai_san}',
+      () => '${san.danhMuc}',
+      () => '${san.danh_muc}',
+      () => '${san.tenLoai}',
+      () => '${san.ten_loai}',
+      () => '${san.ten}',
+    ];
+
+    for (final getter in getters) {
+      try {
+        final value = getter().trim();
+
+        if (value.isNotEmpty && value != 'null') {
+          return value.toLowerCase();
+        }
+      } catch (_) {}
+    }
+
+    return '';
+  }
+
+  bool coSoDungLoaiSan(CoSo coSo) {
+    if (loaiSanDangChon == 'tat_ca') {
+      return true;
+    }
+
+    final danhSachSan = coSo.danhSachSan;
+
+    if (danhSachSan.isEmpty) {
+      return true;
+    }
+
+    bool coThongTinLoaiSan = false;
+
+    for (final dynamic san in danhSachSan) {
+      final text = layThongTinLoaiSan(san);
+
+      if (text.isEmpty) continue;
+
+      coThongTinLoaiSan = true;
+
+      final laVip = text.contains('vip');
+
+      if (loaiSanDangChon == 'vip' && laVip) {
+        return true;
+      }
+
+      if (loaiSanDangChon == 'thuong' && !laVip) {
+        return true;
+      }
+    }
+
+    if (!coThongTinLoaiSan) {
+      return true;
+    }
+
+    return false;
+  }
+
+  bool coSoDungKhoangGia(CoSo coSo) {
+    if (giaTuDangChon == null && giaDenDangChon == null) {
+      return true;
+    }
+
+    final gia = coSo.giaThapNhat;
+
+    if (gia <= 0) {
+      return false;
+    }
+
+    if (giaTuDangChon != null && gia < giaTuDangChon!) {
+      return false;
+    }
+
+    if (giaDenDangChon != null && gia > giaDenDangChon!) {
+      return false;
+    }
+
+    return true;
   }
 
   String chuanHoaTimKiem(String text) {
@@ -377,6 +484,9 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
       list = list.where(coSoCoGia).toList();
     }
 
+    list = list.where(coSoDungLoaiSan).toList();
+    list = list.where(coSoDungKhoangGia).toList();
+
     return list;
   }
 
@@ -445,6 +555,9 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
     setState(() {
       chiHienConSan = false;
       chiHienCoGia = false;
+      loaiSanDangChon = 'tat_ca';
+      giaTuDangChon = null;
+      giaDenDangChon = null;
     });
   }
 
@@ -509,122 +622,370 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
   }
 
   void moBoLoc() {
+    String tamLoaiSan = loaiSanDangChon;
     bool tamConSan = chiHienConSan;
     bool tamCoGia = chiHienCoGia;
 
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (_) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(
-                  top: Radius.circular(22),
+    final giaTuController = TextEditingController(
+      text: giaTuDangChon == null ? '' : giaTuDangChon!.toStringAsFixed(0),
+    );
+
+    final giaDenController = TextEditingController(
+      text: giaDenDangChon == null ? '' : giaDenDangChon!.toStringAsFixed(0),
+    );
+
+    Widget nutLoaiSan({
+      required String value,
+      required String text,
+      required String tamValue,
+      required void Function(String value) onChanged,
+    }) {
+      final dangChon = tamValue == value;
+
+      return Expanded(
+        child: InkWell(
+          onTap: () {
+            onChanged(value);
+          },
+          borderRadius: BorderRadius.circular(10),
+          child: Container(
+            height: 39,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: dangChon ? const Color(0xffeef4ff) : Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color:
+                    dangChon ? const Color(0xff2454ff) : Colors.grey.shade300,
+                width: 1,
+              ),
+            ),
+            child: Text(
+              text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 12,
+                color: dangChon ? const Color(0xff2454ff) : Colors.black87,
+                fontWeight: dangChon ? FontWeight.w900 : FontWeight.w700,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    Widget oNhapGia({
+      required String label,
+      required TextEditingController controller,
+      required String hint,
+    }) {
+      return Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10.5,
+                color: Colors.grey.shade700,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 6),
+            SizedBox(
+              height: 42,
+              child: TextField(
+                controller: controller,
+                keyboardType: TextInputType.number,
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  color: Colors.black87,
+                  fontWeight: FontWeight.w700,
+                ),
+                decoration: InputDecoration(
+                  hintText: hint,
+                  hintStyle: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey.shade400,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  filled: true,
+                  fillColor: Colors.white,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 0,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(11),
+                    borderSide: BorderSide(
+                      color: Colors.grey.shade300,
+                    ),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(11),
+                    borderSide: BorderSide(
+                      color: Colors.grey.shade300,
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(11),
+                    borderSide: const BorderSide(
+                      color: Color(0xff2454ff),
+                      width: 1.2,
+                    ),
+                  ),
                 ),
               ),
-              child: SafeArea(
-                top: false,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 10, 18, 16),
+            ),
+          ],
+        ),
+      );
+    }
+
+    Widget dongCongTac({
+      required String title,
+      required bool value,
+      required void Function(bool value) onChanged,
+    }) {
+      return InkWell(
+        onTap: () {
+          onChanged(!value);
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          height: 42,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          decoration: BoxDecoration(
+            color: value ? const Color(0xffeef4ff) : Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: value ? const Color(0xff2454ff) : Colors.grey.shade300,
+              width: 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12.4,
+                    color: value ? const Color(0xff2454ff) : Colors.black87,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                width: 38,
+                height: 22,
+                padding: const EdgeInsets.all(2.5),
+                decoration: BoxDecoration(
+                  color: value ? const Color(0xff2454ff) : Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(99),
+                ),
+                child: AnimatedAlign(
+                  duration: const Duration(milliseconds: 180),
+                  alignment:
+                      value ? Alignment.centerRight : Alignment.centerLeft,
+                  child: Container(
+                    width: 17,
+                    height: 17,
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogContext) {
+        final rongManHinh = MediaQuery.of(dialogContext).size.width;
+        final caoManHinh = MediaQuery.of(dialogContext).size.height;
+        final rongHop = rongManHinh > 520 ? 420.0 : rongManHinh - 32;
+
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 24,
+          ),
+          child: StatefulBuilder(
+            builder: (context, setDialogState) {
+              return Container(
+                width: rongHop,
+                constraints: BoxConstraints(
+                  maxHeight: caoManHinh * 0.78,
+                ),
+                padding: const EdgeInsets.fromLTRB(18, 16, 18, 17),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.18),
+                      blurRadius: 18,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: SingleChildScrollView(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        width: 42,
-                        height: 5,
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade300,
-                          borderRadius: BorderRadius.circular(99),
-                        ),
+                      Row(
+                        children: [
+                          const Expanded(
+                            child: Text(
+                              'Bộ lọc',
+                              style: TextStyle(
+                                fontSize: 18,
+                                color: Colors.black,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
+                          InkWell(
+                            onTap: () {
+                              Navigator.pop(dialogContext);
+                            },
+                            borderRadius: BorderRadius.circular(20),
+                            child: const Icon(
+                              Icons.close_rounded,
+                              size: 21,
+                              color: Colors.black54,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 12),
-                      const Text(
-                        'Bộ lọc sân',
+                      const SizedBox(height: 17),
+                      Text(
+                        'LOẠI SÂN',
                         style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.black,
+                          fontSize: 10.5,
+                          color: Colors.grey.shade700,
                           fontWeight: FontWeight.w900,
+                          letterSpacing: 0.3,
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      SwitchListTile(
-                        dense: true,
-                        visualDensity: VisualDensity.compact,
-                        contentPadding: EdgeInsets.zero,
+                      const SizedBox(height: 9),
+                      Row(
+                        children: [
+                          nutLoaiSan(
+                            value: 'tat_ca',
+                            text: 'Tất cả',
+                            tamValue: tamLoaiSan,
+                            onChanged: (value) {
+                              setDialogState(() {
+                                tamLoaiSan = value;
+                              });
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          nutLoaiSan(
+                            value: 'thuong',
+                            text: 'Sân thường',
+                            tamValue: tamLoaiSan,
+                            onChanged: (value) {
+                              setDialogState(() {
+                                tamLoaiSan = value;
+                              });
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          nutLoaiSan(
+                            value: 'vip',
+                            text: 'Sân VIP',
+                            tamValue: tamLoaiSan,
+                            onChanged: (value) {
+                              setDialogState(() {
+                                tamLoaiSan = value;
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          oNhapGia(
+                            label: 'GIÁ TỪ',
+                            controller: giaTuController,
+                            hint: '0',
+                          ),
+                          const SizedBox(width: 12),
+                          oNhapGia(
+                            label: 'GIÁ ĐẾN',
+                            controller: giaDenController,
+                            hint: '200000',
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      dongCongTac(
+                        title: 'Chỉ hiện sân còn sân',
                         value: tamConSan,
-                        activeColor: const Color(0xff2454ff),
-                        title: const Text(
-                          'Chỉ hiện sân còn sân',
-                          style: TextStyle(
-                            fontSize: 12.8,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        subtitle: const Text(
-                          'Ẩn các cơ sở không có số sân',
-                          style: TextStyle(
-                            fontSize: 10.5,
-                          ),
-                        ),
                         onChanged: (value) {
-                          setModalState(() {
+                          setDialogState(() {
                             tamConSan = value;
                           });
                         },
                       ),
-                      SwitchListTile(
-                        dense: true,
-                        visualDensity: VisualDensity.compact,
-                        contentPadding: EdgeInsets.zero,
+                      const SizedBox(height: 8),
+                      dongCongTac(
+                        title: 'Chỉ hiện sân có giá',
                         value: tamCoGia,
-                        activeColor: const Color(0xff2454ff),
-                        title: const Text(
-                          'Chỉ hiện sân có giá',
-                          style: TextStyle(
-                            fontSize: 12.8,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        subtitle: const Text(
-                          'Ẩn các cơ sở chưa có giá',
-                          style: TextStyle(
-                            fontSize: 10.5,
-                          ),
-                        ),
                         onChanged: (value) {
-                          setModalState(() {
+                          setDialogState(() {
                             tamCoGia = value;
                           });
                         },
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 13),
                       Row(
                         children: [
                           Expanded(
                             child: SizedBox(
-                              height: 39,
+                              height: 42,
                               child: OutlinedButton(
                                 onPressed: () {
-                                  xoaBoLocTrongNutLoc();
-                                  Navigator.pop(context);
+                                  setState(() {
+                                    loaiSanDangChon = 'tat_ca';
+                                    giaTuDangChon = null;
+                                    giaDenDangChon = null;
+                                    chiHienConSan = false;
+                                    chiHienCoGia = false;
+                                  });
+
+                                  Navigator.pop(dialogContext);
                                 },
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: Colors.black87,
+                                  backgroundColor: Colors.grey.shade100,
                                   side: BorderSide(
-                                    color: Colors.grey.shade300,
+                                    color: Colors.grey.shade100,
                                   ),
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
+                                    borderRadius: BorderRadius.circular(11),
                                   ),
                                 ),
                                 child: const Text(
                                   'Xóa lọc',
                                   style: TextStyle(
-                                    fontSize: 12.5,
-                                    fontWeight: FontWeight.w800,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w900,
                                   ),
                                 ),
                               ),
@@ -633,27 +994,33 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: SizedBox(
-                              height: 39,
+                              height: 42,
                               child: ElevatedButton(
                                 onPressed: () {
                                   setState(() {
+                                    loaiSanDangChon = tamLoaiSan;
+                                    giaTuDangChon =
+                                        docGiaTien(giaTuController.text);
+                                    giaDenDangChon =
+                                        docGiaTien(giaDenController.text);
                                     chiHienConSan = tamConSan;
                                     chiHienCoGia = tamCoGia;
                                   });
-                                  Navigator.pop(context);
+
+                                  Navigator.pop(dialogContext);
                                 },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xff2454ff),
                                   foregroundColor: Colors.white,
                                   elevation: 0,
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
+                                    borderRadius: BorderRadius.circular(11),
                                   ),
                                 ),
                                 child: const Text(
                                   'Áp dụng',
                                   style: TextStyle(
-                                    fontSize: 12.5,
+                                    fontSize: 13,
                                     fontWeight: FontWeight.w900,
                                   ),
                                 ),
@@ -665,12 +1032,15 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
                     ],
                   ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         );
       },
-    );
+    ).whenComplete(() {
+      giaTuController.dispose();
+      giaDenController.dispose();
+    });
   }
 
   void moSapXep() {

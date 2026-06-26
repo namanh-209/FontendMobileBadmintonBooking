@@ -672,7 +672,7 @@ class _ManHinhBanDoState extends State<ManHinhBanDo> {
                   ),
             const SizedBox(width: 5),
             const Text(
-              'Gần bạn',
+              'Vị trí của tôi',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 11.5,
