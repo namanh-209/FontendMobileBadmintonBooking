@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../Chung/Duong_dan_api.dart';
@@ -24,6 +26,30 @@ class ManHinhTrangChu extends StatefulWidget {
   State<ManHinhTrangChu> createState() => _ManHinhTrangChuState();
 }
 
+class _BannerKhuyenMai {
+  final int id;
+  final CoSo coSo;
+  final String tenKhuyenMai;
+  final String giaTriHienThi;
+  final String moTa;
+  final String hanDung;
+  final String badge;
+  final String nutBam;
+  final String anhNen;
+
+  const _BannerKhuyenMai({
+    required this.id,
+    required this.coSo,
+    required this.tenKhuyenMai,
+    required this.giaTriHienThi,
+    required this.moTa,
+    required this.hanDung,
+    required this.badge,
+    required this.nutBam,
+    required this.anhNen,
+  });
+}
+
 class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
   int bannerDangChon = 0;
 
@@ -44,6 +70,11 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
   final PageController bannerController = PageController();
   final TextEditingController timKiemController = TextEditingController();
 
+
+  List<_BannerKhuyenMai> danhSachBannerKhuyenMai = [];
+  List<String> danhSachAnhBannerDaCo = [];
+  bool dangTaiBannerKhuyenMai = false;
+
   Timer? timerBanner;
 
   @override
@@ -51,15 +82,25 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
     super.initState();
 
     Future.microtask(() async {
+      await taiDanhSachAnhBanner();
+
+      if (!mounted) return;
+
       await context.read<XuLiYeuThich>().taiYeuThichDaLuu();
 
       if (!mounted) return;
 
-      await context.read<XuLiCoSo>().layDanhSachCoSo();
+      final xuLiCoSo = context.read<XuLiCoSo>();
+      await xuLiCoSo.layDanhSachCoSo();
+
+      if (!mounted) return;
+
+      await taiBannerKhuyenMai(xuLiCoSo.danhSachCoSo);
     });
 
     batDauTuChayBanner();
   }
+
 
   @override
   void dispose() {
@@ -67,6 +108,20 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
     bannerController.dispose();
     timKiemController.dispose();
     super.dispose();
+  }
+
+  int soLuongBannerHienTai() {
+    if (danhSachBannerKhuyenMai.isNotEmpty) {
+      return danhSachBannerKhuyenMai.length > 3
+          ? 3
+          : danhSachBannerKhuyenMai.length;
+    }
+
+    final danhSachCoSo = context.read<XuLiCoSo>().danhSachCoSo;
+
+    if (danhSachCoSo.isEmpty) return 1;
+
+    return danhSachCoSo.length > 3 ? 3 : danhSachCoSo.length;
   }
 
   void batDauTuChayBanner() {
@@ -77,7 +132,12 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
       (timer) {
         if (!mounted || !bannerController.hasClients) return;
 
-        final trangTiepTheo = bannerDangChon == 2 ? 0 : bannerDangChon + 1;
+        final soLuong = soLuongBannerHienTai();
+
+        if (soLuong <= 1) return;
+
+        final trangTiepTheo =
+            bannerDangChon >= soLuong - 1 ? 0 : bannerDangChon + 1;
 
         bannerController.animateToPage(
           trangTiepTheo,
@@ -87,6 +147,7 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
       },
     );
   }
+
 
   void moDangNhapNeuLaKhach() {
     final taiKhoan = context.read<XuLiTaiKhoan>();
@@ -125,6 +186,16 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
 
     return '$ngayText/$thangText';
   }
+
+  String dinhDangNgayDayDu(DateTime? ngay) {
+    if (ngay == null) return '';
+
+    final ngayText = ngay.day.toString().padLeft(2, '0');
+    final thangText = ngay.month.toString().padLeft(2, '0');
+
+    return '$ngayText/$thangText/${ngay.year}';
+  }
+
 
   String dinhDangGio(TimeOfDay gio) {
     final gioText = gio.hour.toString().padLeft(2, '0');
@@ -549,6 +620,528 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
     final daSapXep = sapXepDanhSach(theoLoc);
 
     return daSapXep;
+  }
+
+
+  List<dynamic> layMang(dynamic data, List<String> keys) {
+    if (data is List) return data;
+
+    if (data is Map) {
+      for (final key in keys) {
+        final value = data[key];
+
+        if (value is List) return value;
+      }
+
+      if (data['data'] is Map) {
+        return layMang(data['data'], keys);
+      }
+    }
+
+    return [];
+  }
+
+  String layTextMap(Map<String, dynamic> map, List<String> keys) {
+    for (final key in keys) {
+      final value = map[key];
+
+      if (value == null) continue;
+
+      final text = '$value'.trim();
+
+      if (text.isNotEmpty && text.toLowerCase() != 'null') {
+        return text;
+      }
+    }
+
+    return '';
+  }
+
+  int layIntMap(Map<String, dynamic> map, List<String> keys) {
+    for (final key in keys) {
+      final value = map[key];
+
+      if (value == null) continue;
+
+      if (value is num) return value.toInt();
+
+      final text = '$value'.trim();
+      final so = int.tryParse(text) ?? double.tryParse(text)?.toInt();
+
+      if (so != null) return so;
+    }
+
+    return 0;
+  }
+
+  double layDoubleMap(Map<String, dynamic> map, List<String> keys) {
+    for (final key in keys) {
+      final value = map[key];
+
+      if (value == null) continue;
+
+      if (value is num) return value.toDouble();
+
+      final text = '$value'
+          .replaceAll('đ', '')
+          .replaceAll('%', '')
+          .replaceAll('.', '')
+          .replaceAll(',', '.')
+          .replaceAll(' ', '')
+          .trim();
+
+      final so = double.tryParse(text);
+
+      if (so != null) return so;
+    }
+
+    return 0;
+  }
+
+  DateTime? layNgayMap(Map<String, dynamic> map, List<String> keys) {
+    for (final key in keys) {
+      final value = map[key];
+
+      if (value == null) continue;
+
+      final text = '$value'.trim();
+
+      if (text.isEmpty || text.toLowerCase() == 'null') continue;
+
+      final ngay = DateTime.tryParse(text);
+
+      if (ngay != null) return ngay;
+    }
+
+    return null;
+  }
+
+  Future<void> taiDanhSachAnhBanner() async {
+    final fallback = [
+      DuongDanAnh.banner1,
+      DuongDanAnh.banner2,
+      DuongDanAnh.banner3,
+      DuongDanAnh.banner4,
+      DuongDanAnh.banner5,
+      'assets/images/Banner1.png',
+      'assets/images/Banner2.png',
+      'assets/images/Banner3.png',
+      'assets/images/Banner4.png',
+      'assets/images/Banner5.png',
+    ];
+
+    try {
+      List<String> assets = [];
+
+      try {
+        final manifest = await AssetManifest.loadFromAssetBundle(rootBundle);
+        assets = manifest.listAssets();
+      } catch (_) {
+        final raw = await rootBundle.loadString('AssetManifest.json');
+        final map = jsonDecode(raw) as Map<String, dynamic>;
+        assets = map.keys.toList();
+      }
+
+      final danhSach = assets.where((path) {
+        final lower = path.toLowerCase();
+
+        return lower.startsWith('assets/images/') &&
+            lower.contains('banner') &&
+            (lower.endsWith('.png') ||
+                lower.endsWith('.jpg') ||
+                lower.endsWith('.jpeg') ||
+                lower.endsWith('.webp'));
+      }).toList();
+
+      danhSach.sort((a, b) {
+        return soThuTuBanner(a).compareTo(soThuTuBanner(b));
+      });
+
+      if (!mounted) return;
+
+      setState(() {
+        danhSachAnhBannerDaCo = danhSach.isEmpty ? fallback.take(5).toList() : danhSach;
+      });
+    } catch (_) {
+      if (!mounted) return;
+
+      setState(() {
+        danhSachAnhBannerDaCo = fallback.take(5).toList();
+      });
+    }
+  }
+
+  int soThuTuBanner(String path) {
+    final match = RegExp(r'banner[^0-9]*([0-9]+)').firstMatch(
+      path.toLowerCase(),
+    );
+
+    return int.tryParse(match?.group(1) ?? '') ?? 999;
+  }
+
+  Color mauTheoBanner(String anhNen) {
+    final lower = anhNen.toLowerCase();
+
+    if (lower.contains('banner1')) return const Color(0xff7c3aed);
+    if (lower.contains('banner2')) return const Color(0xffd97706);
+    if (lower.contains('banner3')) return const Color(0xff2f7d32);
+    if (lower.contains('banner4')) return const Color(0xff2563eb);
+    if (lower.contains('banner5')) return const Color(0xff1d4ed8);
+
+    return const Color(0xff2454ff);
+  }
+
+  Color mauNenNheTheoBanner(String anhNen) {
+    final lower = anhNen.toLowerCase();
+
+    if (lower.contains('banner1')) return const Color(0xfff4ecff);
+    if (lower.contains('banner2')) return const Color(0xfffff2d6);
+    if (lower.contains('banner3')) return const Color(0xffedf7ef);
+    if (lower.contains('banner4')) return const Color(0xffeaf3ff);
+    if (lower.contains('banner5')) return const Color(0xffeaf3ff);
+
+    return const Color(0xffeaf3ff);
+  }
+
+  List<String> layDanhSachAnhBannerNgauNhien() {
+    final banners = danhSachAnhBannerDaCo.isNotEmpty
+        ? [...danhSachAnhBannerDaCo]
+        : [
+            DuongDanAnh.banner1,
+            DuongDanAnh.banner2,
+            DuongDanAnh.banner3,
+            DuongDanAnh.banner4,
+            DuongDanAnh.banner5,
+          ];
+
+    banners.shuffle();
+
+    return banners.take(3).toList();
+  }
+
+  String layAnhNenBanner(List<String> danhSachAnh, int index) {
+    if (danhSachAnh.isEmpty) {
+      return DuongDanAnh.banner1;
+    }
+
+    return danhSachAnh[index % danhSachAnh.length];
+  }
+
+
+  CoSo? timCoSoTheoKhuyenMai(
+    Map<String, dynamic> item,
+    List<CoSo> danhSachCoSo,
+  ) {
+    final coSoId = layIntMap(
+      item,
+      const [
+        'co_so_id',
+        'coSoId',
+        'coso_id',
+        'cosoId',
+        'id_co_so',
+        'idCoSo',
+        'san_id',
+        'sanId',
+      ],
+    );
+
+    if (coSoId > 0) {
+      for (final coSo in danhSachCoSo) {
+        if (coSo.id == coSoId) {
+          return coSo;
+        }
+      }
+    }
+
+    final coSoRaw = item['co_so'] ??
+        item['coSo'] ??
+        item['coso'] ??
+        item['facility'] ??
+        item['san'];
+
+    if (coSoRaw is Map) {
+      try {
+        return CoSo.fromJson(
+          Map<String, dynamic>.from(coSoRaw),
+        );
+      } catch (_) {}
+    }
+
+    return null;
+  }
+
+  bool khuyenMaiSapHetHan(Map<String, dynamic> item) {
+    final ngayKetThuc = layNgayMap(
+      item,
+      const [
+        'ngay_ket_thuc',
+        'ngayKetThuc',
+        'han_su_dung',
+        'hanSuDung',
+        'end_date',
+        'endDate',
+        'expired_at',
+        'expiredAt',
+      ],
+    );
+
+    if (ngayKetThuc == null) return false;
+
+    final homNay = DateTime.now();
+    final ngayHomNay = DateTime(homNay.year, homNay.month, homNay.day);
+    final ngayHetHan = DateTime(
+      ngayKetThuc.year,
+      ngayKetThuc.month,
+      ngayKetThuc.day,
+    );
+
+    final soNgayConLai = ngayHetHan.difference(ngayHomNay).inDays;
+
+    return soNgayConLai >= 0 && soNgayConLai <= 3;
+  }
+
+  String layBadgeKhuyenMai(Map<String, dynamic> item) {
+    if (khuyenMaiSapHetHan(item)) {
+      return 'SẮP HẾT HẠN';
+    }
+
+    final loai = layTextMap(
+      item,
+      const [
+        'loai_giam_gia',
+        'loaiGiamGia',
+        'loai_giam',
+        'loaiGiam',
+        'kieu_giam',
+        'kieuGiam',
+        'type',
+      ],
+    ).toLowerCase();
+
+    if (loai.contains('phan') ||
+        loai.contains('%') ||
+        loai.contains('percent')) {
+      return 'ƯU ĐÃI';
+    }
+
+    if (loai.contains('tien') ||
+        loai.contains('money') ||
+        loai.contains('fixed')) {
+      return 'VOUCHER';
+    }
+
+    return 'KHUYẾN MÃI';
+  }
+
+  String layGiaTriKhuyenMai(Map<String, dynamic> item) {
+    final loai = layTextMap(
+      item,
+      const [
+        'loai_giam_gia',
+        'loaiGiamGia',
+        'loai_giam',
+        'loaiGiam',
+        'kieu_giam',
+        'kieuGiam',
+        'type',
+      ],
+    ).toLowerCase();
+
+    final giaTri = layDoubleMap(
+      item,
+      const [
+        'gia_tri_giam',
+        'giaTriGiam',
+        'gia_tri',
+        'giaTri',
+        'value',
+        'discount',
+        'discount_value',
+        'discountValue',
+        'so_tien_giam',
+        'soTienGiam',
+        'phan_tram_giam',
+        'phanTramGiam',
+      ],
+    );
+
+    if (giaTri <= 0) {
+      return 'Ưu đãi hấp dẫn';
+    }
+
+    if (loai.contains('phan') ||
+        loai.contains('%') ||
+        loai.contains('percent')) {
+      return 'Giảm ${giaTri.toStringAsFixed(0)}%';
+    }
+
+    return 'Giảm ${dinhDangGia(giaTri)}';
+  }
+
+  String layTenKhuyenMai(Map<String, dynamic> item) {
+    final ten = layTextMap(
+      item,
+      const [
+        'ten_khuyen_mai',
+        'tenKhuyenMai',
+        'ten',
+        'name',
+        'title',
+        'tieu_de',
+        'tieuDe',
+      ],
+    );
+
+    if (ten.isNotEmpty) return ten;
+
+    return 'Ưu đãi đặt sân';
+  }
+
+  String layMoTaKhuyenMai(Map<String, dynamic> item, CoSo coSo) {
+    final moTa = layTextMap(
+      item,
+      const [
+        'mo_ta',
+        'moTa',
+        'description',
+        'noi_dung',
+        'noiDung',
+        'ghi_chu',
+        'ghiChu',
+      ],
+    );
+
+    if (moTa.isNotEmpty) return moTa;
+
+    if (coSo.giaThapNhat > 0) {
+      return 'Chỉ từ ${dinhDangGia(coSo.giaThapNhat)}/giờ tại ${coSo.tenCoSo}';
+    }
+
+    return 'Ưu đãi dành cho ${coSo.tenCoSo}';
+  }
+
+  String layHanDungKhuyenMai(Map<String, dynamic> item) {
+    final ngayKetThuc = layNgayMap(
+      item,
+      const [
+        'ngay_ket_thuc',
+        'ngayKetThuc',
+        'han_su_dung',
+        'hanSuDung',
+        'end_date',
+        'endDate',
+        'expired_at',
+        'expiredAt',
+      ],
+    );
+
+    if (ngayKetThuc == null) {
+      return 'Đang áp dụng';
+    }
+
+    return 'Hạn dùng: ${dinhDangNgayDayDu(ngayKetThuc)}';
+  }
+
+  
+
+  Future<void> taiBannerKhuyenMai(List<CoSo> danhSachCoSo) async {
+    // API khuyến mãi hiện chưa có route lấy tất cả banner cho mobile.
+    // Để tránh spam /api/api và tránh văng app, trang chủ chỉ lấy dữ liệu cơ sở thật
+    // rồi đổ lên 3 banner ngẫu nhiên trong 5 ảnh banner.
+    if (!mounted) return;
+
+    final danhSachAnh = layDanhSachAnhBannerNgauNhien();
+    final danhSach = danhSachCoSo
+        .where((coSo) => coSo.id > 0)
+        .toList();
+
+    danhSach.shuffle();
+
+    final banners = danhSach
+        .take(3)
+        .toList()
+        .asMap()
+        .entries
+        .map(
+          (entry) => taoBannerTuCoSo(
+            entry.value,
+            danhSachAnh,
+            entry.key,
+          ),
+        )
+        .toList();
+
+    setState(() {
+      danhSachBannerKhuyenMai = banners;
+      bannerDangChon = 0;
+      dangTaiBannerKhuyenMai = false;
+    });
+
+    if (bannerController.hasClients) {
+      bannerController.jumpToPage(0);
+    }
+  }
+
+  _BannerKhuyenMai taoBannerTuCoSo(
+    CoSo coSo,
+    List<String> danhSachAnh,
+    int index,
+  ) {
+    final gia = coSo.giaThapNhat > 0
+        ? 'Từ ${dinhDangGia(coSo.giaThapNhat)}/giờ'
+        : 'Đặt sân nhanh';
+
+    return _BannerKhuyenMai(
+      id: coSo.id,
+      coSo: coSo,
+      tenKhuyenMai: 'Sân cầu lông nổi bật',
+      giaTriHienThi: gia,
+      moTa: coSo.tenCoSo,
+      hanDung:
+          '${hienThiSoSan(coSo)} • ${coSo.tinhThanh.isEmpty ? 'Sẵn sàng đặt sân' : coSo.tinhThanh}',
+      badge: 'GỢI Ý',
+      nutBam: 'Xem sân',
+      anhNen: layAnhNenBanner(danhSachAnh, index),
+    );
+  }
+
+
+  List<_BannerKhuyenMai> taoBannerMacDinh(List<CoSo> danhSachCoSo) {
+    final danhSachAnh = layDanhSachAnhBannerNgauNhien();
+
+    final danhSach = danhSachCoSo
+        .where((coSo) => coSo.id > 0)
+        .toList();
+
+    danhSach.shuffle();
+
+    final danhSach3CoSo = danhSach.take(3).toList();
+
+    if (danhSach3CoSo.isEmpty) {
+      return [
+        _BannerKhuyenMai(
+          id: 0,
+          coSo: CoSo(
+            id: 0,
+            ten: 'Badminton Booking',
+            diaChi: '',
+            moTa: '',
+          ),
+          tenKhuyenMai: 'Đặt sân nhanh chóng',
+          giaTriHienThi: 'Chỉ 3 bước là xong',
+          moTa: 'Tìm sân • Chọn giờ • Xác nhận đặt sân',
+          hanDung: 'Khám phá sân cầu lông gần bạn',
+          badge: 'BADMINTON',
+          nutBam: 'Khám phá',
+          anhNen: layAnhNenBanner(danhSachAnh, 0),
+        ),
+      ];
+    }
+
+    return List.generate(danhSach3CoSo.length, (index) {
+      return taoBannerTuCoSo(danhSach3CoSo[index], danhSachAnh, index);
+    });
   }
 
   void xoaBoLocTrongNutLoc() {
@@ -1564,17 +2157,30 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
     );
   }
 
+
   Widget bannerVoucher() {
-    final List<String> banners = [
-      DuongDanAnh.banner1,
-      DuongDanAnh.banner2,
-      DuongDanAnh.banner3,
-    ];
+    final xuLiCoSo = context.watch<XuLiCoSo>();
+
+    final bannersGoc = danhSachBannerKhuyenMai.isNotEmpty
+        ? danhSachBannerKhuyenMai
+        : taoBannerMacDinh(xuLiCoSo.danhSachCoSo);
+
+    final banners = bannersGoc.take(3).toList();
+
+    if (banners.isEmpty) {
+      return const SizedBox(height: 145);
+    }
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final chieuRong = constraints.maxWidth;
-        final chieuCao = chieuRong / 2.55;
+
+        // Tăng chiều cao banner một chút để cụm chữ có đủ chỗ.
+        final chieuCao = ((chieuRong / 2.38).clamp(155.0, 182.0)).toDouble();
+
+        final dpr = MediaQuery.of(context).devicePixelRatio;
+        final cacheWidth = (chieuRong * dpr).round();
+        final cacheHeight = (chieuCao * dpr).round();
 
         return SizedBox(
           height: chieuCao,
@@ -1583,77 +2189,368 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
               PageView.builder(
                 controller: bannerController,
                 itemCount: banners.length,
+                allowImplicitScrolling: false,
                 onPageChanged: (index) {
+                  if (!mounted) return;
+
                   setState(() {
                     bannerDangChon = index;
                   });
                 },
                 itemBuilder: (context, index) {
-                  return Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(15),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Colors.black12,
-                          blurRadius: 6,
-                          offset: Offset(2, 3),
+                  final banner = banners[index];
+                  final mauChinh = mauTheoBanner(banner.anhNen);
+                  final mauNenNhe = mauNenNheTheoBanner(banner.anhNen);
+
+                  final rongText = chieuRong * 0.46;
+
+                  return InkWell(
+                    onTap: () {
+                      if (banner.coSo.id > 0) {
+                        chuyenChiTietCoSo(banner.coSo);
+                      } else {
+                        chuyenTatCaCoSo();
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(18),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(18),
+                        boxShadow: [
+                          BoxShadow(
+                            color: mauChinh.withOpacity(0.14),
+                            blurRadius: 9,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(18),
+                        child: Stack(
+                          clipBehavior: Clip.hardEdge,
+                          children: [
+                            Positioned.fill(
+                              child: Image.asset(
+                                banner.anhNen,
+                                fit: BoxFit.fill,
+                                cacheWidth: cacheWidth,
+                                cacheHeight: cacheHeight,
+                                filterQuality: FilterQuality.low,
+                                errorBuilder: (context, error, stackTrace) {
+                                  debugPrint(
+                                    'LOI TAI BANNER: ${banner.anhNen} - $error',
+                                  );
+
+                                  return Container(
+                                    color: mauNenNhe,
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                      'Lỗi ảnh banner\n${banner.anhNen}',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        color: mauChinh,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                            Positioned.fill(
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.centerLeft,
+                                    end: Alignment.centerRight,
+                                    colors: [
+                                      Colors.white.withOpacity(0.08),
+                                      Colors.white.withOpacity(0.015),
+                                      Colors.transparent,
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              left: 15,
+                              top: 11,
+                              bottom: 18,
+                              width: rongText,
+                              child: ClipRect(
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.topLeft,
+                                  child: SizedBox(
+                                    // Quan trọng: chiều cao này lớn hơn tổng nội dung bên trong.
+                                    // FittedBox sẽ scale xuống vừa khung thật, nên không còn overflow.
+                                    width: rongText,
+                                    height: 148,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Container(
+                                              width: 21,
+                                              height: 21,
+                                              decoration: BoxDecoration(
+                                                color:
+                                                    mauChinh.withOpacity(0.95),
+                                                shape: BoxShape.circle,
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: mauChinh
+                                                        .withOpacity(0.22),
+                                                    blurRadius: 4,
+                                                    offset: const Offset(0, 2),
+                                                  ),
+                                                ],
+                                              ),
+                                              child: const Icon(
+                                                Icons.sports_tennis_rounded,
+                                                color: Colors.white,
+                                                size: 11,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 6),
+                                            Container(
+                                              height: 21,
+                                              constraints: BoxConstraints(
+                                                maxWidth: rongText * 0.65,
+                                              ),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                horizontal: 9,
+                                              ),
+                                              alignment: Alignment.center,
+                                              decoration: BoxDecoration(
+                                                color: Colors.white
+                                                    .withOpacity(0.72),
+                                                borderRadius:
+                                                    BorderRadius.circular(99),
+                                                border: Border.all(
+                                                  color: mauChinh
+                                                      .withOpacity(0.16),
+                                                  width: 0.7,
+                                                ),
+                                              ),
+                                              child: Text(
+                                                banner.badge.toUpperCase(),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: TextStyle(
+                                                  color: mauChinh,
+                                                  fontSize: 8,
+                                                  fontWeight: FontWeight.w900,
+                                                  letterSpacing: 0.2,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 7),
+                                        Container(
+                                          width: double.infinity,
+                                          padding: const EdgeInsets.fromLTRB(
+                                            10,
+                                            7,
+                                            10,
+                                            7,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color:
+                                                Colors.white.withOpacity(0.44),
+                                            borderRadius:
+                                                BorderRadius.circular(13),
+                                            border: Border.all(
+                                              color:
+                                                  mauChinh.withOpacity(0.12),
+                                              width: 0.8,
+                                            ),
+                                          ),
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Text(
+                                                banner.tenKhuyenMai,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: TextStyle(
+                                                  color: mauChinh
+                                                      .withOpacity(0.92),
+                                                  fontSize: 9.5,
+                                                  fontWeight: FontWeight.w900,
+                                                  height: 1,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 3),
+                                              SizedBox(
+                                                height: 20,
+                                                child: FittedBox(
+                                                  fit: BoxFit.scaleDown,
+                                                  alignment:
+                                                      Alignment.centerLeft,
+                                                  child: Text(
+                                                    banner.giaTriHienThi,
+                                                    maxLines: 1,
+                                                    style: TextStyle(
+                                                      color: mauChinh,
+                                                      fontSize: 18,
+                                                      fontWeight:
+                                                          FontWeight.w900,
+                                                      height: 1,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(height: 3),
+                                              Text(
+                                                banner.moTa,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: TextStyle(
+                                                  color: Colors.grey.shade800,
+                                                  fontSize: 8.2,
+                                                  fontWeight: FontWeight.w800,
+                                                  height: 1.0,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 1),
+                                              Text(
+                                                banner.hanDung,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: TextStyle(
+                                                  color: Colors.grey.shade600,
+                                                  fontSize: 7.3,
+                                                  fontWeight: FontWeight.w700,
+                                                  height: 1.0,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(height: 7),
+                                        SizedBox(
+                                          height: 24,
+                                          child: DecoratedBox(
+                                            decoration: BoxDecoration(
+                                              gradient: LinearGradient(
+                                                colors: [
+                                                  mauChinh,
+                                                  mauChinh.withOpacity(0.78),
+                                                ],
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(99),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: mauChinh
+                                                      .withOpacity(0.18),
+                                                  blurRadius: 5,
+                                                  offset: const Offset(0, 2),
+                                                ),
+                                              ],
+                                            ),
+                                            child: Padding(
+                                              padding: const EdgeInsets.only(
+                                                left: 12,
+                                                right: 5,
+                                              ),
+                                              child: Row(
+                                                mainAxisSize:
+                                                    MainAxisSize.min,
+                                                children: [
+                                                  Text(
+                                                    banner.nutBam,
+                                                    style: const TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: 9,
+                                                      fontWeight:
+                                                          FontWeight.w900,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 6),
+                                                  Container(
+                                                    width: 17,
+                                                    height: 17,
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.white
+                                                          .withOpacity(0.24),
+                                                      shape: BoxShape.circle,
+                                                    ),
+                                                    child: const Icon(
+                                                      Icons
+                                                          .arrow_forward_ios_rounded,
+                                                      color: Colors.white,
+                                                      size: 8,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(15),
-                      child: Image.asset(
-                        banners[index],
-                        width: double.infinity,
-                        height: chieuCao,
-                        fit: BoxFit.cover,
                       ),
                     ),
                   );
                 },
               ),
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 7,
-                child: IgnorePointer(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(
-                      banners.length,
-                      (index) {
-                        final dangChon = index == bannerDangChon;
+              if (banners.length > 1)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 5,
+                  child: IgnorePointer(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(
+                        banners.length,
+                        (index) {
+                          final banner = banners[index];
+                          final mauChinh = mauTheoBanner(banner.anhNen);
+                          final dangChon = index == bannerDangChon;
 
-                        return AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          margin: const EdgeInsets.symmetric(horizontal: 2.5),
-                          width: dangChon ? 12 : 5,
-                          height: 5,
-                          decoration: BoxDecoration(
-                            color: dangChon
-                                ? Colors.white
-                                : Colors.white.withOpacity(0.55),
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.12),
-                                blurRadius: 2,
-                                offset: const Offset(0, 1),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
+                          return AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            margin:
+                                const EdgeInsets.symmetric(horizontal: 2.5),
+                            width: dangChon ? 13 : 5,
+                            height: 5,
+                            decoration: BoxDecoration(
+                              color: dangChon
+                                  ? mauChinh
+                                  : mauChinh.withOpacity(0.22),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                          );
+                        },
+                      ),
                     ),
                   ),
                 ),
-              ),
             ],
           ),
         );
       },
     );
   }
+
+
 
   Widget anhMacDinh() {
     return Container(

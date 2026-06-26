@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
 
 import '../Chung/Duong_dan_api.dart';
@@ -220,6 +221,10 @@ class _ManHinhChiTietSanState extends State<ManHinhChiTietSan> {
   bool dangXemLich = false;
   bool dangXemBangGia = false;
 
+  bool dangLayViTri = false;
+  double? viDoNguoiDung;
+  double? kinhDoNguoiDung;
+
   String? loi;
 
   @override
@@ -238,6 +243,7 @@ class _ManHinhChiTietSanState extends State<ManHinhChiTietSan> {
     anhCoSoDuPhong = coSo.hinhAnh.trim();
 
     Future.microtask(taiDuLieuLanDau);
+    Future.microtask(layViTriHienTai);
   }
 
   @override
@@ -348,6 +354,103 @@ class _ManHinhChiTietSanState extends State<ManHinhChiTietSan> {
     debugPrint('ANH CO SO CHI TIET/LICH: $url');
 
     return url;
+  }
+
+  bool coToaDoCoSo() {
+    return coSo.viDo != 0 && coSo.kinhDo != 0;
+  }
+
+  String dinhDangKhoangCachKm(double km) {
+    if (km < 1) {
+      return '${(km * 1000).round()} m';
+    }
+
+    if (km < 10) {
+      return '${km.toStringAsFixed(1)} km';
+    }
+
+    return '${km.toStringAsFixed(0)} km';
+  }
+
+  String hienThiKhoangCach() {
+    if (dangLayViTri) {
+      return 'Đang lấy';
+    }
+
+    if (viDoNguoiDung == null || kinhDoNguoiDung == null) {
+      return '... km';
+    }
+
+    if (!coToaDoCoSo()) {
+      return '... km';
+    }
+
+    final met = Geolocator.distanceBetween(
+      viDoNguoiDung!,
+      kinhDoNguoiDung!,
+      coSo.viDo,
+      coSo.kinhDo,
+    );
+
+    return dinhDangKhoangCachKm(met / 1000);
+  }
+
+  Future<void> layViTriHienTai() async {
+    if (dangLayViTri) return;
+
+    setState(() {
+      dangLayViTri = true;
+    });
+
+    try {
+      final daBatDichVuViTri = await Geolocator.isLocationServiceEnabled();
+
+      if (!daBatDichVuViTri) {
+        if (!mounted) return;
+
+        setState(() {
+          dangLayViTri = false;
+        });
+
+        return;
+      }
+
+      var quyen = await Geolocator.checkPermission();
+
+      if (quyen == LocationPermission.denied) {
+        quyen = await Geolocator.requestPermission();
+      }
+
+      if (quyen == LocationPermission.denied ||
+          quyen == LocationPermission.deniedForever) {
+        if (!mounted) return;
+
+        setState(() {
+          dangLayViTri = false;
+        });
+
+        return;
+      }
+
+      final viTri = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        viDoNguoiDung = viTri.latitude;
+        kinhDoNguoiDung = viTri.longitude;
+      });
+    } catch (_) {
+      // Không hiện lỗi để tránh làm phiền người dùng ở màn chi tiết.
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      dangLayViTri = false;
+    });
   }
 
   Future<void> taiDuLieuLanDau() async {
@@ -1267,12 +1370,16 @@ class _ManHinhChiTietSanState extends State<ManHinhChiTietSan> {
                 color: Colors.grey.shade600,
               ),
               const SizedBox(width: 4),
-              Text(
-                '1.2 Km',
-                style: TextStyle(
-                  fontSize: 10.5,
-                  color: Colors.grey.shade700,
-                  fontWeight: FontWeight.w600,
+              InkWell(
+                onTap: layViTriHienTai,
+                borderRadius: BorderRadius.circular(10),
+                child: Text(
+                  hienThiKhoangCach(),
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    color: Colors.grey.shade700,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],
@@ -1529,7 +1636,9 @@ class _ManHinhChiTietSanState extends State<ManHinhChiTietSan> {
                             url,
                             fit: BoxFit.cover,
                             errorBuilder: (_, error, ___) {
-                              debugPrint('LOI TAI ANH TOM TAT SAN: $url - $error');
+                              debugPrint(
+                                'LOI TAI ANH TOM TAT SAN: $url - $error',
+                              );
                               return Container(
                                 color: const Color(0xffe7f1ff),
                                 child: const Icon(

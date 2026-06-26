@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
-
-import '../Chung/Duong_dan_api.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
+import '../Chung/Duong_dan_api.dart';
 import '../Dung_lai/Hieu_ung_chuyen_trang.dart';
 import '../Dung_lai/Thanh_duoi.dart';
 import '../Mau_du_lieu/Co_so.dart';
 import '../Xu_li/Xu_li_co_so.dart';
+import '../Xu_li/Xu_li_yeu_thich.dart';
 import 'Man_hinh_chi_tiet_san.dart';
 
 class ManHinhBanDo extends StatefulWidget {
@@ -44,6 +44,10 @@ class _ManHinhBanDoState extends State<ManHinhBanDo> {
     });
 
     Future.microtask(() async {
+      await context.read<XuLiYeuThich>().taiYeuThichDaLuu();
+
+      if (!mounted) return;
+
       final xuLyCoSo = context.read<XuLiCoSo>();
 
       if (xuLyCoSo.danhSachCoSo.isEmpty) {
@@ -240,6 +244,7 @@ class _ManHinhBanDoState extends State<ManHinhBanDo> {
       danhSach.sort((a, b) {
         final giaA = a.giaThapNhat <= 0 ? 999999999 : a.giaThapNhat;
         final giaB = b.giaThapNhat <= 0 ? 999999999 : b.giaThapNhat;
+
         return giaA.compareTo(giaB);
       });
     } else if (kieuSapXep == 'danh_gia') {
@@ -440,6 +445,10 @@ class _ManHinhBanDoState extends State<ManHinhBanDo> {
     );
   }
 
+  Future<void> doiYeuThich(CoSo coSo) async {
+    await context.read<XuLiYeuThich>().doiYeuThich(coSo.id);
+  }
+
   List<CircleMarker> taoVongTronViTri() {
     if (viTriCuaToi == null) return [];
 
@@ -589,47 +598,6 @@ class _ManHinhBanDoState extends State<ManHinhBanDo> {
             top: 12,
             right: 10,
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget nutLoc() {
-    return InkWell(
-      onTap: moBangLoc,
-      borderRadius: BorderRadius.circular(18),
-      child: Container(
-        height: 42,
-        width: 68,
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.98),
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: const [
-            BoxShadow(
-              color: Colors.black12,
-              blurRadius: 7,
-              offset: Offset(1, 3),
-            ),
-          ],
-        ),
-        child: const Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.tune_rounded,
-              color: Color(0xff2454ff),
-              size: 18,
-            ),
-            SizedBox(width: 4),
-            Text(
-              'Lọc',
-              style: TextStyle(
-                color: Color(0xff2454ff),
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
         ),
       ),
     );
@@ -824,15 +792,7 @@ class _ManHinhBanDoState extends State<ManHinhBanDo> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: oTimKiem(),
-                ),
-                const SizedBox(width: 8),
-                nutLoc(),
-              ],
-            ),
+            oTimKiem(),
             hopGoiY(danhSachGoc),
             const SizedBox(height: 10),
             nutGanBan(),
@@ -844,13 +804,73 @@ class _ManHinhBanDoState extends State<ManHinhBanDo> {
 
   Widget anhMacDinh() {
     return Container(
-      width: 92,
-      height: 100,
+      width: double.infinity,
+      height: double.infinity,
       color: const Color(0xffe7f1ff),
       child: const Icon(
         Icons.sports_tennis_rounded,
         color: Color(0xff2454ff),
         size: 36,
+      ),
+    );
+  }
+
+  Widget nutChiDuong(CoSo coSo) {
+    return SizedBox(
+      height: 25,
+      child: OutlinedButton.icon(
+        onPressed: () {
+          // TODO: Sau này mở Google Maps ở đây.
+          // Gợi ý: dùng package url_launcher.
+        },
+        icon: const Icon(
+          Icons.directions_rounded,
+          size: 12,
+        ),
+        label: const Text(
+          'Chỉ đường',
+          style: TextStyle(
+            fontSize: 9,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: const Color(0xff2454ff),
+          side: const BorderSide(
+            color: Color(0xff2454ff),
+            width: 1,
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 7),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget nutYeuThich(CoSo coSo) {
+    final daYeuThich = context.watch<XuLiYeuThich>().kiemTraYeuThich(coSo.id);
+
+    return SizedBox(
+      width: 27,
+      height: 27,
+      child: Material(
+        color: daYeuThich ? const Color(0xffffeef2) : Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(999),
+        child: InkWell(
+          onTap: () {
+            doiYeuThich(coSo);
+          },
+          borderRadius: BorderRadius.circular(999),
+          child: Icon(
+            daYeuThich
+                ? Icons.favorite_rounded
+                : Icons.favorite_border_rounded,
+            color: daYeuThich ? Colors.red : Colors.black54,
+            size: 16,
+          ),
+        ),
       ),
     );
   }
@@ -867,7 +887,7 @@ class _ManHinhBanDoState extends State<ManHinhBanDo> {
         moChiTiet(coSo);
       },
       child: Container(
-        height: 100,
+        height: 116,
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(17),
@@ -881,37 +901,50 @@ class _ManHinhBanDoState extends State<ManHinhBanDo> {
         ),
         child: Row(
           children: [
-            ClipRRect(
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(17),
-                bottomLeft: Radius.circular(17),
+            SizedBox(
+              width: 98,
+              height: 116,
+              child: ClipRRect(
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(17),
+                  bottomLeft: Radius.circular(17),
+                ),
+                child: coSo.hinhAnh.isNotEmpty
+                    ? Image.network(
+                        DuongDanApi.linkAnh(coSo.hinhAnh),
+                        width: 98,
+                        height: 116,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return anhMacDinh();
+                        },
+                      )
+                    : anhMacDinh(),
               ),
-              child: coSo.hinhAnh.isNotEmpty
-                  ? Image.network(
-                      DuongDanApi.linkAnh(coSo.hinhAnh),
-                      width: 92,
-                      height: 100,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) =>
-                          anhMacDinh(),
-                    )
-                  : anhMacDinh(),
             ),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+                padding: const EdgeInsets.fromLTRB(9, 7, 9, 7),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      coSo.tenCoSo,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Color(0xff172554),
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            coSo.tenCoSo,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Color(0xff172554),
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                        nutYeuThich(coSo),
+                      ],
                     ),
                     const SizedBox(height: 2),
                     Row(
@@ -925,7 +958,7 @@ class _ManHinhBanDoState extends State<ManHinhBanDo> {
                         Text(
                           danhGiaText,
                           style: TextStyle(
-                            fontSize: 9,
+                            fontSize: 9.2,
                             color: Colors.grey.shade700,
                             fontWeight: FontWeight.w600,
                           ),
@@ -943,7 +976,7 @@ class _ManHinhBanDoState extends State<ManHinhBanDo> {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              fontSize: 9,
+                              fontSize: 9.2,
                               color: Colors.grey.shade700,
                               fontWeight: FontWeight.w500,
                             ),
@@ -966,7 +999,7 @@ class _ManHinhBanDoState extends State<ManHinhBanDo> {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              fontSize: 9,
+                              fontSize: 9.2,
                               color: Colors.grey.shade700,
                               fontWeight: FontWeight.w500,
                             ),
@@ -986,7 +1019,7 @@ class _ManHinhBanDoState extends State<ManHinhBanDo> {
                         Text(
                           '5:00 - 22:00',
                           style: TextStyle(
-                            fontSize: 9,
+                            fontSize: 9.2,
                             color: Colors.grey.shade700,
                             fontWeight: FontWeight.w500,
                           ),
@@ -997,7 +1030,7 @@ class _ManHinhBanDoState extends State<ManHinhBanDo> {
                     Row(
                       children: [
                         Container(
-                          height: 21,
+                          height: 22,
                           padding: const EdgeInsets.symmetric(horizontal: 7),
                           decoration: BoxDecoration(
                             color: const Color(0xffdcfce7),
@@ -1024,14 +1057,7 @@ class _ManHinhBanDoState extends State<ManHinhBanDo> {
                           ),
                         ),
                         const Spacer(),
-                        Text(
-                          dinhDangGia(coSo.giaThapNhat),
-                          style: const TextStyle(
-                            fontSize: 9,
-                            color: Color(0xff2454ff),
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                        nutChiDuong(coSo),
                         const SizedBox(width: 6),
                         SizedBox(
                           height: 25,
@@ -1044,7 +1070,7 @@ class _ManHinhBanDoState extends State<ManHinhBanDo> {
                               foregroundColor: Colors.white,
                               elevation: 0,
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 9,
+                                horizontal: 10,
                               ),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8),
@@ -1071,125 +1097,10 @@ class _ManHinhBanDoState extends State<ManHinhBanDo> {
     );
   }
 
-  Widget nutLuaChonLoc({
-    required String text,
-    required String value,
-    required IconData icon,
-  }) {
-    final dangChon = kieuSapXep == value;
-
-    return ListTile(
-      dense: true,
-      leading: Icon(
-        icon,
-        color: dangChon ? const Color(0xff2454ff) : Colors.grey.shade700,
-      ),
-      title: Text(
-        text,
-        style: TextStyle(
-          fontSize: 13,
-          fontWeight: dangChon ? FontWeight.bold : FontWeight.w500,
-          color: dangChon ? const Color(0xff2454ff) : Colors.black87,
-        ),
-      ),
-      trailing: dangChon
-          ? const Icon(
-              Icons.check_circle_rounded,
-              color: Color(0xff2454ff),
-            )
-          : null,
-      onTap: () async {
-        Navigator.pop(context);
-
-        if (value == 'gan_ban' && viTriCuaToi == null) {
-          await layViTriCuaToi();
-        }
-
-        if (!mounted) return;
-
-        setState(() {
-          kieuSapXep = value;
-        });
-
-        final danhSachGoc = context.read<XuLiCoSo>().danhSachCoSo;
-        final danhSach = danhSachSauKhiLoc(danhSachGoc);
-
-        if (danhSach.isNotEmpty) {
-          diChuyenMap(
-            tinhTamDanhSach(danhSach),
-            zoom: 12.5,
-          );
-        }
-      },
-    );
-  }
-
-  void moBangLoc() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(22),
-        ),
-      ),
-      builder: (context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 18),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 42,
-                  height: 5,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                const Text(
-                  'Lọc sân trên bản đồ',
-                  style: TextStyle(
-                    color: Color(0xff172554),
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                nutLuaChonLoc(
-                  text: 'Mặc định',
-                  value: 'mac_dinh',
-                  icon: Icons.map_rounded,
-                ),
-                nutLuaChonLoc(
-                  text: 'Gần bạn nhất',
-                  value: 'gan_ban',
-                  icon: Icons.near_me_rounded,
-                ),
-                nutLuaChonLoc(
-                  text: 'Giá thấp nhất',
-                  value: 'gia_thap',
-                  icon: Icons.sell_rounded,
-                ),
-                nutLuaChonLoc(
-                  text: 'Đánh giá cao',
-                  value: 'danh_gia',
-                  icon: Icons.star_rounded,
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
   Widget chuThichOsm() {
     return Positioned(
       right: 12,
-      bottom: 224,
+      bottom: 240,
       child: IgnorePointer(
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),

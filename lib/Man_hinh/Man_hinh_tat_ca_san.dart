@@ -146,7 +146,7 @@ class _ManHinhTatCaSanState extends State<ManHinhTatCaSan> {
     if (sapXepDangChon == 'Giá cao đến thấp') return 'Giá cao';
     if (sapXepDangChon == 'Nhiều sân nhất') return 'Nhiều sân';
 
-    return 'Lọc và sắp xếp';
+    return 'Sắp xếp';
   }
 
   void chuyenChiTietCoSo(CoSo coSo) {
@@ -952,7 +952,7 @@ class _ManHinhTatCaSanState extends State<ManHinhTatCaSan> {
                       const SizedBox(width: 8),
                       nutLoc(
                         tenNutLocSapXep(),
-                        Icons.tune_rounded,
+                        Icons.swap_vert_rounded,
                         moSapXep,
                       ),
                     ],
