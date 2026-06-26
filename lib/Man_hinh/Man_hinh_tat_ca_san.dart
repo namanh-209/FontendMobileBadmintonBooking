@@ -83,9 +83,8 @@ class _ManHinhTatCaSanState extends State<ManHinhTatCaSan> {
   }
 
   String hienThiSoSan(CoSo coSo) {
-    final soSan = coSo.soLuongSan > 0
-        ? coSo.soLuongSan
-        : coSo.danhSachSan.length;
+    final soSan =
+        coSo.soLuongSan > 0 ? coSo.soLuongSan : coSo.danhSachSan.length;
 
     return '$soSan sân';
   }
@@ -137,6 +136,17 @@ class _ManHinhTatCaSanState extends State<ManHinhTatCaSan> {
     }
 
     return '$tinh • ${dinhDangKhoangCach(khoangCach)}';
+  }
+
+  String tenNutLocSapXep() {
+    if (dangLayViTri) return 'Đang lấy';
+
+    if (sapXepDangChon == 'Gần bạn') return 'Gần nhất';
+    if (sapXepDangChon == 'Giá thấp đến cao') return 'Giá thấp';
+    if (sapXepDangChon == 'Giá cao đến thấp') return 'Giá cao';
+    if (sapXepDangChon == 'Nhiều sân nhất') return 'Nhiều sân';
+
+    return 'Lọc và sắp xếp';
   }
 
   void chuyenChiTietCoSo(CoSo coSo) {
@@ -382,9 +392,20 @@ class _ManHinhTatCaSanState extends State<ManHinhTatCaSan> {
     );
   }
 
+  IconData iconSapXep(String item) {
+    if (item == 'Mặc định') return Icons.restart_alt_rounded;
+    if (item == 'Gần bạn') return Icons.location_on_rounded;
+    if (item == 'Giá thấp đến cao') return Icons.arrow_upward_rounded;
+    if (item == 'Giá cao đến thấp') return Icons.arrow_downward_rounded;
+    if (item == 'Nhiều sân nhất') return Icons.stadium_outlined;
+
+    return Icons.sort_rounded;
+  }
+
   void moSapXep() {
     final List<String> danhSach = [
       'Mặc định',
+      'Gần bạn',
       'Giá thấp đến cao',
       'Giá cao đến thấp',
       'Nhiều sân nhất',
@@ -393,16 +414,22 @@ class _ManHinhTatCaSanState extends State<ManHinhTatCaSan> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (context) {
-        return Container(
-          margin: const EdgeInsets.all(12),
-          padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(18),
-          ),
-          child: SafeArea(
-            top: false,
+        final chieuCaoToiDa = MediaQuery.of(context).size.height * 0.76;
+
+        return SafeArea(
+          top: false,
+          child: Container(
+            margin: const EdgeInsets.all(12),
+            padding: const EdgeInsets.fromLTRB(18, 14, 18, 14),
+            constraints: BoxConstraints(
+              maxHeight: chieuCaoToiDa,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -410,9 +437,9 @@ class _ManHinhTatCaSanState extends State<ManHinhTatCaSan> {
                   children: [
                     const Expanded(
                       child: Text(
-                        'Sắp xếp',
+                        'Lọc và sắp xếp',
                         style: TextStyle(
-                          fontSize: 18,
+                          fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -422,70 +449,97 @@ class _ManHinhTatCaSanState extends State<ManHinhTatCaSan> {
                         Navigator.pop(context);
                       },
                       borderRadius: BorderRadius.circular(20),
-                      child: const Icon(Icons.close_rounded),
+                      child: const Icon(
+                        Icons.close_rounded,
+                        size: 20,
+                      ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 14),
-                ...danhSach.map((item) {
-                  final bool dangChon = item == sapXepDangChon;
+                const SizedBox(height: 11),
+                Flexible(
+                  child: ListView(
+                    shrinkWrap: true,
+                    padding: EdgeInsets.zero,
+                    children: danhSach.map((item) {
+                      final bool dangChon = item == sapXepDangChon;
 
-                  return InkWell(
-                    onTap: () {
-                      setState(() {
-                        sapXepDangChon = item;
-                      });
+                      return InkWell(
+                        onTap: () async {
+                          if (item == 'Gần bạn') {
+                            Navigator.pop(context);
+                            await sapXepTheoGanBan();
+                            return;
+                          }
 
-                      Navigator.pop(context);
-                    },
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      width: double.infinity,
-                      margin: const EdgeInsets.only(bottom: 10),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 12,
-                      ),
-                      decoration: BoxDecoration(
-                        color: dangChon
-                            ? const Color(0xffeef4ff)
-                            : Colors.white,
+                          setState(() {
+                            sapXepDangChon = item;
+                          });
+
+                          Navigator.pop(context);
+                        },
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: dangChon
-                              ? const Color(0xff2454ff)
-                              : Colors.grey.shade300,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            dangChon
-                                ? Icons.radio_button_checked
-                                : Icons.radio_button_off,
-                            size: 18,
-                            color: dangChon
-                                ? const Color(0xff2454ff)
-                                : Colors.grey.shade700,
+                        child: Container(
+                          width: double.infinity,
+                          margin: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 9,
                           ),
-                          const SizedBox(width: 10),
-                          Text(
-                            item,
-                            style: TextStyle(
-                              fontSize: 13,
+                          decoration: BoxDecoration(
+                            color: dangChon
+                                ? const Color(0xffeef4ff)
+                                : Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
                               color: dangChon
                                   ? const Color(0xff2454ff)
-                                  : Colors.black87,
-                              fontWeight: dangChon
-                                  ? FontWeight.bold
-                                  : FontWeight.w500,
+                                  : Colors.grey.shade300,
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                  );
-                }),
+                          child: Row(
+                            children: [
+                              Icon(
+                                dangChon
+                                    ? Icons.radio_button_checked
+                                    : Icons.radio_button_off,
+                                size: 17,
+                                color: dangChon
+                                    ? const Color(0xff2454ff)
+                                    : Colors.grey.shade700,
+                              ),
+                              const SizedBox(width: 9),
+                              Icon(
+                                iconSapXep(item),
+                                size: 17,
+                                color: dangChon
+                                    ? const Color(0xff2454ff)
+                                    : Colors.black54,
+                              ),
+                              const SizedBox(width: 9),
+                              Expanded(
+                                child: Text(
+                                  item,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    color: dangChon
+                                        ? const Color(0xff2454ff)
+                                        : Colors.black87,
+                                    fontWeight: dangChon
+                                        ? FontWeight.bold
+                                        : FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
               ],
             ),
           ),
@@ -796,7 +850,7 @@ class _ManHinhTatCaSanState extends State<ManHinhTatCaSan> {
           child: Text(
             xuLiCoSo.thongBaoLoi!,
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
               color: Colors.black87,
               fontWeight: FontWeight.w600,
@@ -888,25 +942,17 @@ class _ManHinhTatCaSanState extends State<ManHinhTatCaSan> {
                   oTimKiem(),
                   const SizedBox(height: 12),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    mainAxisAlignment: MainAxisAlignment.start,
                     children: [
                       nutLoc(
                         '$tongSoCoSo cơ sở',
                         Icons.manage_search_rounded,
                         () {},
                       ),
+                      const SizedBox(width: 8),
                       nutLoc(
-                        dangLayViTri
-                            ? 'Đang lấy'
-                            : sapXepDangChon == 'Gần bạn'
-                                ? 'Gần nhất'
-                                : 'Gần bạn',
-                        Icons.location_on_rounded,
-                        sapXepTheoGanBan,
-                      ),
-                      nutLoc(
-                        'Sắp xếp',
-                        Icons.swap_vert_rounded,
+                        tenNutLocSapXep(),
+                        Icons.tune_rounded,
                         moSapXep,
                       ),
                     ],
