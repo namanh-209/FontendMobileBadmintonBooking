@@ -2272,376 +2272,427 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final chieuRong = constraints.maxWidth;
+        final chieuRongManHinh = constraints.maxWidth;
+        final laManHinhRong = chieuRongManHinh >= 650;
 
-        // Tăng chiều cao banner một chút để cụm chữ có đủ chỗ.
-        final chieuCao = ((chieuRong / 2.38).clamp(155.0, 182.0)).toDouble();
+        // Màn Fold/tablet rộng quá thì không kéo banner full ngang,
+        // nếu kéo full ngang ảnh sẽ dẹt và chữ nhìn bị nhỏ.
+        final chieuRongBanner = laManHinhRong
+            ? chieuRongManHinh.clamp(620.0, 820.0).toDouble()
+            : chieuRongManHinh;
+
+        final chieuCao = laManHinhRong
+            ? ((chieuRongBanner / 3.05).clamp(220.0, 270.0)).toDouble()
+            : ((chieuRongBanner / 2.38).clamp(155.0, 182.0)).toDouble();
 
         final dpr = MediaQuery.of(context).devicePixelRatio;
-        final cacheWidth = (chieuRong * dpr).round();
+        final cacheWidth = (chieuRongBanner * dpr).round();
         final cacheHeight = (chieuCao * dpr).round();
 
-        return SizedBox(
-          height: chieuCao,
-          child: Stack(
-            children: [
-              PageView.builder(
-                controller: bannerController,
-                itemCount: banners.length,
-                allowImplicitScrolling: false,
-                onPageChanged: (index) {
-                  if (!mounted) return;
+        final rongText = laManHinhRong
+            ? chieuRongBanner * 0.47
+            : chieuRongBanner * 0.46;
 
-                  setState(() {
-                    bannerDangChon = index;
-                  });
-                },
-                itemBuilder: (context, index) {
-                  final banner = banners[index];
-                  final mauChinh = mauTheoBanner(banner.anhNen);
-                  final mauNenNhe = mauNenNheTheoBanner(banner.anhNen);
+        final leftText = laManHinhRong ? 28.0 : 15.0;
+        final topText = laManHinhRong ? 28.0 : 18.0;
+        final bottomText = laManHinhRong ? 18.0 : 10.0;
 
-                  final rongText = chieuRong * 0.46;
+        final caoKhungChu = laManHinhRong ? 210.0 : 154.0;
 
-                  return InkWell(
-                    onTap: () {
-                      if (banner.coSo.id > 0) {
-                        chuyenChiTietCoSo(banner.coSo);
-                      } else {
-                        chuyenTatCaCoSo();
-                      }
-                    },
-                    borderRadius: BorderRadius.circular(18),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(18),
-                        boxShadow: [
-                          BoxShadow(
-                            color: mauChinh.withOpacity(0.14),
-                            blurRadius: 9,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(18),
-                        child: Stack(
-                          clipBehavior: Clip.hardEdge,
-                          children: [
-                            Positioned.fill(
-                              child: Image.asset(
-                                banner.anhNen,
-                                fit: BoxFit.fill,
-                                cacheWidth: cacheWidth,
-                                cacheHeight: cacheHeight,
-                                filterQuality: FilterQuality.low,
-                                errorBuilder: (context, error, stackTrace) {
-                                  debugPrint(
-                                    'LOI TAI BANNER: ${banner.anhNen} - $error',
-                                  );
+        final sizeIconTron = laManHinhRong ? 28.0 : 21.0;
+        final sizeIconVot = laManHinhRong ? 15.0 : 11.0;
+        final caoBadge = laManHinhRong ? 27.0 : 21.0;
+        final fontBadge = laManHinhRong ? 10.5 : 8.0;
 
-                                  return Container(
-                                    color: mauNenNhe,
-                                    alignment: Alignment.center,
-                                    child: Text(
-                                      'Lỗi ảnh banner\n${banner.anhNen}',
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        color: mauChinh,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w900,
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
+        final paddingKhungChu = laManHinhRong
+            ? const EdgeInsets.fromLTRB(15, 15, 15, 12)
+            : const EdgeInsets.fromLTRB(10, 11, 10, 7);
+
+        final radiusKhungChu = laManHinhRong ? 17.0 : 13.0;
+
+        final fontTieuDe = laManHinhRong ? 12.5 : 9.5;
+        final fontGia = laManHinhRong ? 25.0 : 18.0;
+        final caoGia = laManHinhRong ? 30.0 : 20.0;
+        final fontMoTa = laManHinhRong ? 10.5 : 8.2;
+        final fontHanDung = laManHinhRong ? 9.4 : 7.3;
+
+        final caoNut = laManHinhRong ? 32.0 : 24.0;
+        final fontNut = laManHinhRong ? 12.0 : 9.3;
+        final iconNut = laManHinhRong ? 22.0 : 18.0;
+        final iconNutSize = laManHinhRong ? 18.0 : 15.0;
+
+        return Center(
+          child: SizedBox(
+            width: chieuRongBanner,
+            height: chieuCao,
+            child: Stack(
+              children: [
+                PageView.builder(
+                  controller: bannerController,
+                  itemCount: banners.length,
+                  allowImplicitScrolling: false,
+                  onPageChanged: (index) {
+                    if (!mounted) return;
+
+                    setState(() {
+                      bannerDangChon = index;
+                    });
+                  },
+                  itemBuilder: (context, index) {
+                    final banner = banners[index];
+                    final mauChinh = mauTheoBanner(banner.anhNen);
+                    final mauNenNhe = mauNenNheTheoBanner(banner.anhNen);
+
+                    return InkWell(
+                      onTap: () {
+                        if (banner.coSo.id > 0) {
+                          chuyenChiTietCoSo(banner.coSo);
+                        } else {
+                          chuyenTatCaCoSo();
+                        }
+                      },
+                      borderRadius: BorderRadius.circular(18),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(18),
+                          boxShadow: [
+                            BoxShadow(
+                              color: mauChinh.withOpacity(0.14),
+                              blurRadius: 9,
+                              offset: const Offset(0, 4),
                             ),
-                            Positioned.fill(
-                              child: DecoratedBox(
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.centerLeft,
-                                    end: Alignment.centerRight,
-                                    colors: [
-                                      Colors.white.withOpacity(0.08),
-                                      Colors.white.withOpacity(0.015),
-                                      Colors.transparent,
-                                    ],
-                                  ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(18),
+                          child: Stack(
+                            clipBehavior: Clip.hardEdge,
+                            children: [
+                              Positioned.fill(
+                                child: Image.asset(
+                                  banner.anhNen,
+                                  fit: BoxFit.fill,
+                                  cacheWidth: cacheWidth,
+                                  cacheHeight: cacheHeight,
+                                  filterQuality: FilterQuality.low,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    debugPrint(
+                                      'LOI TAI BANNER: ${banner.anhNen} - $error',
+                                    );
+
+                                    return Container(
+                                      color: mauNenNhe,
+                                      alignment: Alignment.center,
+                                      child: Text(
+                                        'Lỗi ảnh banner\n${banner.anhNen}',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          color: mauChinh,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w900,
+                                        ),
+                                      ),
+                                    );
+                                  },
                                 ),
                               ),
-                            ),
-                            Positioned(
-                              left: 15,
-                              top: 18,
-                              bottom: 10,
-                              width: rongText,
-                              child: ClipRect(
-                                child: FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  alignment: Alignment.topLeft,
-                                  child: SizedBox(
-                                    // Quan trọng: chiều cao này lớn hơn tổng nội dung bên trong.
-                                    // FittedBox sẽ scale xuống vừa khung thật, nên không còn overflow.
-                                    width: rongText,
-                                    height: 154,
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Container(
-                                              width: 21,
-                                              height: 21,
-                                              decoration: BoxDecoration(
-                                                color:
-                                                    mauChinh.withOpacity(0.95),
-                                                shape: BoxShape.circle,
-                                                boxShadow: [
-                                                  BoxShadow(
-                                                    color: mauChinh
-                                                        .withOpacity(0.22),
-                                                    blurRadius: 4,
-                                                    offset: const Offset(0, 2),
-                                                  ),
-                                                ],
-                                              ),
-                                              child: const Icon(
-                                                Icons.sports_tennis_rounded,
-                                                color: Colors.white,
-                                                size: 11,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 6),
-                                            Container(
-                                              height: 21,
-                                              constraints: BoxConstraints(
-                                                maxWidth: rongText * 0.65,
-                                              ),
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                horizontal: 9,
-                                              ),
-                                              alignment: Alignment.center,
-                                              decoration: BoxDecoration(
-                                                color: Colors.white
-                                                    .withOpacity(0.72),
-                                                borderRadius:
-                                                    BorderRadius.circular(99),
-                                                border: Border.all(
-                                                  color: mauChinh
-                                                      .withOpacity(0.16),
-                                                  width: 0.7,
-                                                ),
-                                              ),
-                                              child: Text(
-                                                banner.badge.toUpperCase(),
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: TextStyle(
-                                                  color: mauChinh,
-                                                  fontSize: 8,
-                                                  fontWeight: FontWeight.w900,
-                                                  letterSpacing: 0.2,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 7),
-                                        Container(
-                                          width: double.infinity,
-                                          padding: const EdgeInsets.fromLTRB(
-                                            10,
-                                            11,
-                                            10,
-                                            7,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color:
-                                                Colors.white.withOpacity(0.44),
-                                            borderRadius:
-                                                BorderRadius.circular(13),
-                                            border: Border.all(
-                                              color:
-                                                  mauChinh.withOpacity(0.12),
-                                              width: 0.8,
-                                            ),
-                                          ),
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Text(
-                                                banner.tenKhuyenMai,
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: TextStyle(
-                                                  color: mauChuPhuTheoBanner(banner.anhNen),
-                                                  fontSize: 9.5,
-                                                  fontWeight: FontWeight.w900,
-                                                  height: 1,
-                                                ),
-                                              ),
-                                              const SizedBox(height: 3),
-                                              SizedBox(
-                                                height: 20,
-                                                child: FittedBox(
-                                                  fit: BoxFit.scaleDown,
-                                                  alignment:
-                                                      Alignment.centerLeft,
-                                                  child: Text(
-                                                    banner.giaTriHienThi,
-                                                    maxLines: 1,
-                                                    style: TextStyle(
-                                                      color: mauChinh,
-                                                      fontSize: 18,
-                                                      fontWeight:
-                                                          FontWeight.w900,
-                                                      height: 1,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
-                                              const SizedBox(height: 3),
-                                              Text(
-                                                banner.moTa,
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: TextStyle(
-                                                  color: Colors.grey.shade800,
-                                                  fontSize: 8.2,
-                                                  fontWeight: FontWeight.w800,
-                                                  height: 1.0,
-                                                ),
-                                              ),
-                                              const SizedBox(height: 1),
-                                              Text(
-                                                banner.hanDung,
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: TextStyle(
-                                                  color: Colors.grey.shade600,
-                                                  fontSize: 7.3,
-                                                  fontWeight: FontWeight.w700,
-                                                  height: 1.0,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        const SizedBox(height: 7),
-                                        SizedBox(
-                                          height: 24,
-                                          child: DecoratedBox(
-                                            decoration: BoxDecoration(
-                                              gradient: LinearGradient(
-                                                colors: [
-                                                  mauChinh,
-                                                  mauChinh.withOpacity(0.78),
-                                                ],
-                                              ),
-                                              borderRadius:
-                                                  BorderRadius.circular(99),
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: mauChinh
-                                                      .withOpacity(0.18),
-                                                  blurRadius: 5,
-                                                  offset: const Offset(0, 2),
-                                                ),
-                                              ],
-                                            ),
-                                            child: Padding(
-                                              padding: const EdgeInsets.only(
-                                                left: 12,
-                                                right: 5,
-                                              ),
-                                              child: Row(
-                                                mainAxisSize:
-                                                    MainAxisSize.min,
-                                                children: [
-                                                  Text(
-                                                    banner.nutBam,
-                                                    style: const TextStyle(
-                                                      color: Colors.white,
-                                                      fontSize: 9,
-                                                      fontWeight:
-                                                          FontWeight.w900,
-                                                    ),
-                                                  ),
-                                                  const SizedBox(width: 6),
-                                                  Container(
-                                                    width: 17,
-                                                    height: 17,
-                                                    decoration: BoxDecoration(
-                                                      color: Colors.white
-                                                          .withOpacity(0.24),
-                                                      shape: BoxShape.circle,
-                                                    ),
-                                                    child: const Icon(
-                                                      Icons
-                                                          .arrow_forward_ios_rounded,
-                                                      color: Colors.white,
-                                                      size: 8,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          ),
-                                        ),
+                              Positioned.fill(
+                                child: DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.centerLeft,
+                                      end: Alignment.centerRight,
+                                      colors: [
+                                        Colors.white.withOpacity(0.08),
+                                        Colors.white.withOpacity(0.015),
+                                        Colors.transparent,
                                       ],
                                     ),
                                   ),
                                 ),
                               ),
-                            ),
-                          ],
+                              Positioned(
+                                left: leftText,
+                                top: topText,
+                                bottom: bottomText,
+                                width: rongText,
+                                child: ClipRect(
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.topLeft,
+                                    child: SizedBox(
+                                      width: rongText,
+                                      height: caoKhungChu,
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Container(
+                                                width: sizeIconTron,
+                                                height: sizeIconTron,
+                                                decoration: BoxDecoration(
+                                                  color:
+                                                      mauChinh.withOpacity(0.95),
+                                                  shape: BoxShape.circle,
+                                                  boxShadow: [
+                                                    BoxShadow(
+                                                      color: mauChinh
+                                                          .withOpacity(0.22),
+                                                      blurRadius: 4,
+                                                      offset:
+                                                          const Offset(0, 2),
+                                                    ),
+                                                  ],
+                                                ),
+                                                child: Icon(
+                                                  Icons.sports_tennis_rounded,
+                                                  color: Colors.white,
+                                                  size: sizeIconVot,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 6),
+                                              Container(
+                                                height: caoBadge,
+                                                constraints: BoxConstraints(
+                                                  maxWidth: rongText * 0.68,
+                                                ),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                  horizontal: 10,
+                                                ),
+                                                alignment: Alignment.center,
+                                                decoration: BoxDecoration(
+                                                  color: Colors.white
+                                                      .withOpacity(0.72),
+                                                  borderRadius:
+                                                      BorderRadius.circular(99),
+                                                  border: Border.all(
+                                                    color: mauChinh
+                                                        .withOpacity(0.16),
+                                                    width: 0.7,
+                                                  ),
+                                                ),
+                                                child: Text(
+                                                  banner.badge.toUpperCase(),
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style: TextStyle(
+                                                    color: mauChinh,
+                                                    fontSize: fontBadge,
+                                                    fontWeight: FontWeight.w900,
+                                                    letterSpacing: 0.2,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          SizedBox(
+                                            height: laManHinhRong ? 10 : 7,
+                                          ),
+                                          Container(
+                                            width: double.infinity,
+                                            padding: paddingKhungChu,
+                                            decoration: BoxDecoration(
+                                              color:
+                                                  Colors.white.withOpacity(0.44),
+                                              borderRadius:
+                                                  BorderRadius.circular(
+                                                radiusKhungChu,
+                                              ),
+                                              border: Border.all(
+                                                color:
+                                                    mauChinh.withOpacity(0.12),
+                                                width: 0.8,
+                                              ),
+                                            ),
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Text(
+                                                  banner.tenKhuyenMai,
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style: TextStyle(
+                                                    color: mauChuPhuTheoBanner(
+                                                      banner.anhNen,
+                                                    ),
+                                                    fontSize: fontTieuDe,
+                                                    fontWeight: FontWeight.w900,
+                                                    height: 1,
+                                                  ),
+                                                ),
+                                                SizedBox(
+                                                  height:
+                                                      laManHinhRong ? 5 : 3,
+                                                ),
+                                                SizedBox(
+                                                  height: caoGia,
+                                                  child: FittedBox(
+                                                    fit: BoxFit.scaleDown,
+                                                    alignment:
+                                                        Alignment.centerLeft,
+                                                    child: Text(
+                                                      banner.giaTriHienThi,
+                                                      maxLines: 1,
+                                                      style: TextStyle(
+                                                        color: mauChinh,
+                                                        fontSize: fontGia,
+                                                        fontWeight:
+                                                            FontWeight.w900,
+                                                        height: 1,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                                SizedBox(
+                                                  height:
+                                                      laManHinhRong ? 5 : 3,
+                                                ),
+                                                Text(
+                                                  banner.moTa,
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style: TextStyle(
+                                                    color: Colors.grey.shade800,
+                                                    fontSize: fontMoTa,
+                                                    fontWeight: FontWeight.w800,
+                                                    height: 1.0,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 1),
+                                                Text(
+                                                  banner.hanDung,
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style: TextStyle(
+                                                    color: Colors.grey.shade600,
+                                                    fontSize: fontHanDung,
+                                                    fontWeight: FontWeight.w700,
+                                                    height: 1.0,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          SizedBox(
+                                            height: laManHinhRong ? 10 : 7,
+                                          ),
+                                          SizedBox(
+                                            height: caoNut,
+                                            child: DecoratedBox(
+                                              decoration: BoxDecoration(
+                                                gradient: LinearGradient(
+                                                  colors: [
+                                                    mauChinh,
+                                                    mauChinh.withOpacity(0.78),
+                                                  ],
+                                                ),
+                                                borderRadius:
+                                                    BorderRadius.circular(99),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: mauChinh
+                                                        .withOpacity(0.18),
+                                                    blurRadius: 5,
+                                                    offset:
+                                                        const Offset(0, 2),
+                                                  ),
+                                                ],
+                                              ),
+                                              child: Padding(
+                                                padding: EdgeInsets.only(
+                                                  left:
+                                                      laManHinhRong ? 15 : 12,
+                                                  right: 5,
+                                                ),
+                                                child: Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    Text(
+                                                      banner.nutBam,
+                                                      style: TextStyle(
+                                                        color: Colors.white,
+                                                        fontSize: fontNut,
+                                                        fontWeight:
+                                                            FontWeight.w900,
+                                                      ),
+                                                    ),
+                                                    SizedBox(
+                                                      width: laManHinhRong
+                                                          ? 8
+                                                          : 6,
+                                                    ),
+                                                    Container(
+                                                      width: iconNut,
+                                                      height: iconNut,
+                                                      decoration: BoxDecoration(
+                                                        color: Colors.white
+                                                            .withOpacity(0.22),
+                                                        shape: BoxShape.circle,
+                                                      ),
+                                                      child: Icon(
+                                                        Icons
+                                                            .chevron_right_rounded,
+                                                        color: Colors.white,
+                                                        size: iconNutSize,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                  );
-                },
-              ),
-              if (banners.length > 1)
+                    );
+                  },
+                ),
                 Positioned(
+                  bottom: 5,
                   left: 0,
                   right: 0,
-                  bottom: 5,
-                  child: IgnorePointer(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(
-                        banners.length,
-                        (index) {
-                          final banner = banners[index];
-                          final mauChinh = mauTheoBanner(banner.anhNen);
-                          final dangChon = index == bannerDangChon;
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(banners.length, (index) {
+                      final dangChon = bannerDangChon == index;
+                      final mauCham = mauTheoBanner(banners[index].anhNen);
 
-                          return AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            margin:
-                                const EdgeInsets.symmetric(horizontal: 2.5),
-                            width: dangChon ? 13 : 5,
-                            height: 5,
-                            decoration: BoxDecoration(
-                              color: dangChon
-                                  ? mauChinh
-                                  : mauChinh.withOpacity(0.22),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
+                      return AnimatedContainer(
+                        duration: const Duration(milliseconds: 180),
+                        margin: const EdgeInsets.symmetric(horizontal: 3),
+                        width: dangChon ? 14 : 5,
+                        height: 5,
+                        decoration: BoxDecoration(
+                          color: dangChon
+                              ? mauCham
+                              : mauCham.withOpacity(0.22),
+                          borderRadius: BorderRadius.circular(99),
+                        ),
+                      );
+                    }),
                   ),
                 ),
-            ],
+              ],
+            ),
           ),
         );
       },
