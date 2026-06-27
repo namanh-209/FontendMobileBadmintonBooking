@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -75,6 +76,8 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
   List<String> danhSachAnhBannerDaCo = [];
   bool dangTaiBannerKhuyenMai = false;
 
+  final Random randomBanner = Random();
+
   Timer? timerBanner;
 
   @override
@@ -112,16 +115,12 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
 
   int soLuongBannerHienTai() {
     if (danhSachBannerKhuyenMai.isNotEmpty) {
-      return danhSachBannerKhuyenMai.length > 3
-          ? 3
+      return danhSachBannerKhuyenMai.length > 5
+          ? 5
           : danhSachBannerKhuyenMai.length;
     }
 
-    final danhSachCoSo = context.read<XuLiCoSo>().danhSachCoSo;
-
-    if (danhSachCoSo.isEmpty) return 1;
-
-    return danhSachCoSo.length > 3 ? 3 : danhSachCoSo.length;
+    return 5;
   }
 
   void batDauTuChayBanner() {
@@ -136,8 +135,11 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
 
         if (soLuong <= 1) return;
 
-        final trangTiepTheo =
-            bannerDangChon >= soLuong - 1 ? 0 : bannerDangChon + 1;
+        int trangTiepTheo = bannerDangChon;
+
+        while (trangTiepTheo == bannerDangChon) {
+          trangTiepTheo = randomBanner.nextInt(soLuong);
+        }
 
         bannerController.animateToPage(
           trangTiepTheo,
@@ -147,7 +149,6 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
       },
     );
   }
-
 
   void moDangNhapNeuLaKhach() {
     final taiKhoan = context.read<XuLiTaiKhoan>();
@@ -779,44 +780,99 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
     return int.tryParse(match?.group(1) ?? '') ?? 999;
   }
 
+  int laySoBannerTuTenAnh(String anhNen) {
+    final match = RegExp(r'banner[^0-9]*([0-9]+)').firstMatch(
+      anhNen.toLowerCase(),
+    );
+
+    return int.tryParse(match?.group(1) ?? '') ?? 0;
+  }
+
   Color mauTheoBanner(String anhNen) {
-    final lower = anhNen.toLowerCase();
+    final soBanner = laySoBannerTuTenAnh(anhNen);
 
-    if (lower.contains('banner1')) return const Color(0xff7c3aed);
-    if (lower.contains('banner2')) return const Color(0xffd97706);
-    if (lower.contains('banner3')) return const Color(0xff2f7d32);
-    if (lower.contains('banner4')) return const Color(0xff2563eb);
-    if (lower.contains('banner5')) return const Color(0xff1d4ed8);
+    switch (soBanner) {
+      case 1:
+        return const Color(0xff7c3aed);
+      case 2:
+        return const Color(0xffff9800);
+      case 3:
+        return const Color(0xff16a34a);
+      case 4:
+        return const Color(0xff0284c7);
+      case 5:
+        return const Color(0xff2563eb);
+      default:
+        return const Color(0xff2454ff);
+    }
+  }
 
-    return const Color(0xff2454ff);
+  Color mauChuPhuTheoBanner(String anhNen) {
+    final soBanner = laySoBannerTuTenAnh(anhNen);
+
+    switch (soBanner) {
+      case 1:
+        return const Color(0xff3b0764);
+      case 2:
+        return const Color(0xff78350f);
+      case 3:
+        return const Color(0xff14532d);
+      case 4:
+        return const Color(0xff075985);
+      case 5:
+        return const Color(0xff1e3a8a);
+      default:
+        return const Color(0xff0f235c);
+    }
   }
 
   Color mauNenNheTheoBanner(String anhNen) {
-    final lower = anhNen.toLowerCase();
+    final soBanner = laySoBannerTuTenAnh(anhNen);
 
-    if (lower.contains('banner1')) return const Color(0xfff4ecff);
-    if (lower.contains('banner2')) return const Color(0xfffff2d6);
-    if (lower.contains('banner3')) return const Color(0xffedf7ef);
-    if (lower.contains('banner4')) return const Color(0xffeaf3ff);
-    if (lower.contains('banner5')) return const Color(0xffeaf3ff);
-
-    return const Color(0xffeaf3ff);
+    switch (soBanner) {
+      case 1:
+        return const Color(0xfff3e8ff);
+      case 2:
+        return const Color(0xfffff3d6);
+      case 3:
+        return const Color(0xffecfdf5);
+      case 4:
+        return const Color(0xffe0f2fe);
+      case 5:
+        return const Color(0xffeff6ff);
+      default:
+        return const Color(0xffeaf3ff);
+    }
   }
 
   List<String> layDanhSachAnhBannerNgauNhien() {
+    final fallback = [
+      DuongDanAnh.banner1,
+      DuongDanAnh.banner2,
+      DuongDanAnh.banner3,
+      DuongDanAnh.banner4,
+      DuongDanAnh.banner5,
+    ];
+
     final banners = danhSachAnhBannerDaCo.isNotEmpty
         ? [...danhSachAnhBannerDaCo]
-        : [
-            DuongDanAnh.banner1,
-            DuongDanAnh.banner2,
-            DuongDanAnh.banner3,
-            DuongDanAnh.banner4,
-            DuongDanAnh.banner5,
-          ];
+        : [...fallback];
 
-    banners.shuffle();
+    final ketQua = <String>[];
 
-    return banners.take(3).toList();
+    for (int i = 1; i <= 5; i++) {
+      final index = banners.indexWhere((path) {
+        return laySoBannerTuTenAnh(path) == i;
+      });
+
+      if (index >= 0) {
+        ketQua.add(banners[index]);
+      } else {
+        ketQua.add(fallback[i - 1]);
+      }
+    }
+
+    return ketQua;
   }
 
   String layAnhNenBanner(List<String> danhSachAnh, int index) {
@@ -1046,9 +1102,9 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
   
 
   Future<void> taiBannerKhuyenMai(List<CoSo> danhSachCoSo) async {
-    // API khuyến mãi hiện chưa có route lấy tất cả banner cho mobile.
-    // Để tránh spam /api/api và tránh văng app, trang chủ chỉ lấy dữ liệu cơ sở thật
-    // rồi đổ lên 3 banner ngẫu nhiên trong 5 ảnh banner.
+    // Không gọi API khuyến mãi để tránh lỗi /api/api và lỗi cơ sở không hợp lệ.
+    // Banner lấy 5 ảnh trong assets/images/banner1.png -> banner5.png.
+    // Cứ 5 giây timer sẽ nhảy ngẫu nhiên sang 1 banner khác trong 5 banner.
     if (!mounted) return;
 
     final danhSachAnh = layDanhSachAnhBannerNgauNhien();
@@ -1058,22 +1114,55 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
 
     danhSach.shuffle();
 
-    final banners = danhSach
-        .take(3)
-        .toList()
-        .asMap()
-        .entries
-        .map(
-          (entry) => taoBannerTuCoSo(
-            entry.value,
-            danhSachAnh,
-            entry.key,
+    final banners = <_BannerKhuyenMai>[];
+
+    if (danhSach.isEmpty) {
+      for (int i = 0; i < danhSachAnh.length; i++) {
+        banners.add(
+          _BannerKhuyenMai(
+            id: i,
+            coSo: CoSo(
+              id: 0,
+              ten: 'Badminton Booking',
+              diaChi: '',
+              moTa: '',
+            ),
+            tenKhuyenMai: 'Đặt sân nhanh chóng',
+            giaTriHienThi: i == 0
+                ? 'Tìm sân gần bạn'
+                : i == 1
+                    ? 'Chọn giờ linh hoạt'
+                    : i == 2
+                        ? 'Sân đẹp dễ đặt'
+                        : i == 3
+                            ? 'Đặt sân tiện lợi'
+                            : 'Sẵn sàng ra sân',
+            moTa: 'Tìm sân • Chọn giờ • Xác nhận đặt sân',
+            hanDung: 'Khám phá sân cầu lông gần bạn',
+            badge: 'BADMINTON',
+            nutBam: 'Khám phá',
+            anhNen: layAnhNenBanner(danhSachAnh, i),
           ),
-        )
-        .toList();
+        );
+      }
+    } else {
+      for (int i = 0; i < danhSachAnh.length; i++) {
+        final coSo = danhSach[i % danhSach.length];
+
+        banners.add(
+          taoBannerTuCoSo(
+            coSo,
+            danhSachAnh,
+            i,
+          ),
+        );
+      }
+    }
+
+    if (!mounted) return;
 
     setState(() {
-      danhSachBannerKhuyenMai = banners;
+      danhSachBannerKhuyenMai = banners.take(5).toList();
       bannerDangChon = 0;
       dangTaiBannerKhuyenMai = false;
     });
@@ -1116,12 +1205,10 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
 
     danhSach.shuffle();
 
-    final danhSach3CoSo = danhSach.take(3).toList();
-
-    if (danhSach3CoSo.isEmpty) {
-      return [
-        _BannerKhuyenMai(
-          id: 0,
+    if (danhSach.isEmpty) {
+      return List.generate(danhSachAnh.length, (index) {
+        return _BannerKhuyenMai(
+          id: index,
           coSo: CoSo(
             id: 0,
             ten: 'Badminton Booking',
@@ -1129,18 +1216,30 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
             moTa: '',
           ),
           tenKhuyenMai: 'Đặt sân nhanh chóng',
-          giaTriHienThi: 'Chỉ 3 bước là xong',
+          giaTriHienThi: index == 0
+              ? 'Tìm sân gần bạn'
+              : index == 1
+                  ? 'Chọn giờ linh hoạt'
+                  : index == 2
+                      ? 'Sân đẹp dễ đặt'
+                      : index == 3
+                          ? 'Đặt sân tiện lợi'
+                          : 'Sẵn sàng ra sân',
           moTa: 'Tìm sân • Chọn giờ • Xác nhận đặt sân',
           hanDung: 'Khám phá sân cầu lông gần bạn',
           badge: 'BADMINTON',
           nutBam: 'Khám phá',
-          anhNen: layAnhNenBanner(danhSachAnh, 0),
-        ),
-      ];
+          anhNen: layAnhNenBanner(danhSachAnh, index),
+        );
+      });
     }
 
-    return List.generate(danhSach3CoSo.length, (index) {
-      return taoBannerTuCoSo(danhSach3CoSo[index], danhSachAnh, index);
+    return List.generate(danhSachAnh.length, (index) {
+      return taoBannerTuCoSo(
+        danhSach[index % danhSach.length],
+        danhSachAnh,
+        index,
+      );
     });
   }
 
@@ -2165,7 +2264,7 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
         ? danhSachBannerKhuyenMai
         : taoBannerMacDinh(xuLiCoSo.danhSachCoSo);
 
-    final banners = bannersGoc.take(3).toList();
+    final banners = bannersGoc.take(5).toList();
 
     if (banners.isEmpty) {
       return const SizedBox(height: 145);
@@ -2274,8 +2373,8 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
                             ),
                             Positioned(
                               left: 15,
-                              top: 11,
-                              bottom: 18,
+                              top: 18,
+                              bottom: 10,
                               width: rongText,
                               child: ClipRect(
                                 child: FittedBox(
@@ -2285,7 +2384,7 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
                                     // Quan trọng: chiều cao này lớn hơn tổng nội dung bên trong.
                                     // FittedBox sẽ scale xuống vừa khung thật, nên không còn overflow.
                                     width: rongText,
-                                    height: 148,
+                                    height: 154,
                                     child: Column(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
@@ -2357,7 +2456,7 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
                                           width: double.infinity,
                                           padding: const EdgeInsets.fromLTRB(
                                             10,
-                                            7,
+                                            11,
                                             10,
                                             7,
                                           ),
@@ -2382,8 +2481,7 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
                                                 style: TextStyle(
-                                                  color: mauChinh
-                                                      .withOpacity(0.92),
+                                                  color: mauChuPhuTheoBanner(banner.anhNen),
                                                   fontSize: 9.5,
                                                   fontWeight: FontWeight.w900,
                                                   height: 1,
