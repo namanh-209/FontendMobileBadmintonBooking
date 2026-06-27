@@ -27,7 +27,7 @@ class _ManHinhOtpState extends State<ManHinhOtp> {
   final List<FocusNode> focusNodes = List.generate(6, (_) => FocusNode());
 
   Timer? demNguocTimer;
-  int soGiayConLai = 30;
+  int soGiayConLai = 300;
 
   @override
   void initState() {
@@ -54,7 +54,7 @@ class _ManHinhOtpState extends State<ManHinhOtp> {
     demNguocTimer?.cancel();
 
     setState(() {
-      soGiayConLai = 30;
+      soGiayConLai = 300;
     });
 
     demNguocTimer = Timer.periodic(
@@ -73,6 +73,13 @@ class _ManHinhOtpState extends State<ManHinhOtp> {
 
   String layMaOtp() {
     return otpControllers.map((controller) => controller.text.trim()).join();
+  }
+
+  String dinhDangThoiGianGuiLai() {
+    final phut = soGiayConLai ~/ 60;
+    final giay = soGiayConLai % 60;
+
+    return '$phut:${giay.toString().padLeft(2, '0')}';
   }
 
   void xoaOtpCu() {
@@ -307,7 +314,7 @@ class _ManHinhOtpState extends State<ManHinhOtp> {
 
                   Text(
                     soGiayConLai > 0
-                        ? 'Bạn có thể gửi lại mã sau ${soGiayConLai}s'
+                        ? 'Bạn có thể gửi lại mã sau ${dinhDangThoiGianGuiLai()}'
                         : 'Bạn có thể gửi lại mã OTP',
                     style: TextStyle(
                       fontSize: 14,
@@ -374,7 +381,7 @@ class _ManHinhOtpState extends State<ManHinhOtp> {
                       ),
                       label: Text(
                         soGiayConLai > 0
-                            ? 'Gửi lại (${soGiayConLai}s)'
+                            ? 'Gửi lại (${dinhDangThoiGianGuiLai()})'
                             : 'Gửi lại mã',
                         style: TextStyle(
                           color: coTheGuiLai

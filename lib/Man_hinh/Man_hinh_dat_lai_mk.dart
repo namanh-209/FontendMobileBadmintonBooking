@@ -19,11 +19,13 @@ class ManHinhDatLaiMatKhau extends StatefulWidget {
 }
 
 class _ManHinhDatLaiMatKhauState extends State<ManHinhDatLaiMatKhau> {
+  final matKhauCuController = TextEditingController();
   final matKhauMoiController = TextEditingController();
   final xacNhanMatKhauController = TextEditingController();
 
   @override
   void dispose() {
+    matKhauCuController.dispose();
     matKhauMoiController.dispose();
     xacNhanMatKhauController.dispose();
     super.dispose();
@@ -35,9 +37,20 @@ class _ManHinhDatLaiMatKhauState extends State<ManHinhDatLaiMatKhau> {
     return true;
   }
 
-  void datLaiMatKhau() async {
+  void xuLyMatKhau() async {
+    final xuLy = context.read<XuLiTaiKhoan>();
+    final dangDangNhap = xuLy.daDangNhap;
+
+    final matKhauCu = matKhauCuController.text.trim();
     final matKhauMoi = matKhauMoiController.text.trim();
     final xacNhanMatKhau = xacNhanMatKhauController.text.trim();
+
+    if (dangDangNhap && matKhauCu.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Vui lòng nhập mật khẩu cũ')),
+      );
+      return;
+    }
 
     if (matKhauMoi.isEmpty || xacNhanMatKhau.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -64,31 +77,55 @@ class _ManHinhDatLaiMatKhauState extends State<ManHinhDatLaiMatKhau> {
       return;
     }
 
-    final xuLy = context.read<XuLiTaiKhoan>();
+    bool thanhCong = false;
 
-    final thanhCong = await xuLy.datLaiMatKhau(
-      taiKhoan: widget.taiKhoan,
-      matKhauMoi: matKhauMoi,
-    );
+    if (dangDangNhap) {
+      thanhCong = await xuLy.doiMatKhau(
+        matKhauCu: matKhauCu,
+        matKhauMoi: matKhauMoi,
+        xacNhanMatKhauMoi: xacNhanMatKhau,
+      );
+    } else {
+      thanhCong = await xuLy.datLaiMatKhau(
+        taiKhoan: widget.taiKhoan,
+        matKhauMoi: matKhauMoi,
+        xacNhanMatKhau: xacNhanMatKhau,
+      );
+    }
 
     if (!mounted) return;
 
     if (thanhCong) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đặt lại mật khẩu thành công')),
+        SnackBar(
+          content: Text(
+            dangDangNhap
+                ? 'Đổi mật khẩu thành công'
+                : 'Đặt lại mật khẩu thành công',
+          ),
+        ),
       );
 
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(
-          builder: (_) => const ManHinhDangNhap(),
-        ),
-        (route) => false,
-      );
+      if (dangDangNhap) {
+        Navigator.pop(context);
+      } else {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const ManHinhDangNhap(),
+          ),
+          (route) => false,
+        );
+      }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(xuLy.thongBaoLoi ?? 'Đặt lại mật khẩu thất bại'),
+          content: Text(
+            xuLy.thongBaoLoi ??
+                (dangDangNhap
+                    ? 'Đổi mật khẩu thất bại'
+                    : 'Đặt lại mật khẩu thất bại'),
+          ),
         ),
       );
     }
@@ -116,6 +153,7 @@ class _ManHinhDatLaiMatKhauState extends State<ManHinhDatLaiMatKhau> {
   @override
   Widget build(BuildContext context) {
     final xuLy = context.watch<XuLiTaiKhoan>();
+    final dangDangNhap = xuLy.daDangNhap;
 
     return Scaffold(
       body: Stack(
@@ -126,13 +164,11 @@ class _ManHinhDatLaiMatKhauState extends State<ManHinhDatLaiMatKhau> {
               fit: BoxFit.cover,
             ),
           ),
-
           Positioned.fill(
             child: Container(
               color: Colors.white.withOpacity(0.1),
             ),
           ),
-
           SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 30),
@@ -148,9 +184,9 @@ class _ManHinhDatLaiMatKhauState extends State<ManHinhDatLaiMatKhau> {
 
                   const SizedBox(height: 40),
 
-                  const Text(
-                    'Đặt lại mật khẩu',
-                    style: TextStyle(
+                  Text(
+                    dangDangNhap ? 'Đổi mật khẩu' : 'Đặt lại mật khẩu',
+                    style: const TextStyle(
                       fontSize: 32,
                       fontWeight: FontWeight.w500,
                       color: Colors.black,
@@ -176,6 +212,21 @@ class _ManHinhDatLaiMatKhauState extends State<ManHinhDatLaiMatKhau> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        if (dangDangNhap) ...[
+                          const Text(
+                            'Mật khẩu cũ',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 8),
+                          ONhap(
+                            controller: matKhauCuController,
+                            goiY: 'Nhập mật khẩu cũ',
+                            icon: Icons.lock_open_outlined,
+                            anChu: true,
+                          ),
+                          const SizedBox(height: 25),
+                        ],
+
                         const Text(
                           'Mật khẩu mới',
                           style: TextStyle(fontWeight: FontWeight.w600),
@@ -235,7 +286,7 @@ class _ManHinhDatLaiMatKhauState extends State<ManHinhDatLaiMatKhau> {
                     width: double.infinity,
                     height: 50,
                     child: ElevatedButton(
-                      onPressed: xuLy.dangTai ? null : datLaiMatKhau,
+                      onPressed: xuLy.dangTai ? null : xuLyMatKhau,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xff2454ff),
                         shape: RoundedRectangleBorder(
@@ -243,10 +294,12 @@ class _ManHinhDatLaiMatKhauState extends State<ManHinhDatLaiMatKhau> {
                         ),
                       ),
                       child: xuLy.dangTai
-                          ? const CircularProgressIndicator(color: Colors.white)
-                          : const Text(
-                              'Xác Nhận',
-                              style: TextStyle(
+                          ? const CircularProgressIndicator(
+                              color: Colors.white,
+                            )
+                          : Text(
+                              dangDangNhap ? 'Đổi mật khẩu' : 'Xác nhận',
+                              style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 18,
                               ),
