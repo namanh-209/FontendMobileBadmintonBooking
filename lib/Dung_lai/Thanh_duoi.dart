@@ -4,6 +4,7 @@ import '../Man_hinh/Man_hinh_trang_chu.dart';
 import '../Man_hinh/Man_hinh_ban_do.dart';
 import '../Man_hinh/Man_hinh_tai_khoan.dart';
 import '../Man_hinh/Man_hinh_yeu_thich.dart';
+import '../Man_hinh/Man_hinh_thong_bao.dart';
 import 'Hieu_ung_chuyen_trang.dart';
 
 class ThanhDuoi extends StatelessWidget {
@@ -26,11 +27,7 @@ class ThanhDuoi extends StatelessWidget {
     } else if (viTri == 2) {
       manHinh = const ManHinhYeuThich();
     } else if (viTri == 3) {
-      manHinh = const ManHinhTam(
-        tieuDe: 'Thông báo',
-        noiDung: 'Chức năng thông báo đang phát triển',
-        viTriDangChon: 3,
-      );
+      manHinh = const ManHinhThongBao();
     } else {
       manHinh = const ManHinhTaiKhoan();
     }

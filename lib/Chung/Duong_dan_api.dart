@@ -204,4 +204,9 @@ class DuongDanApi {
   static String themYeuThich(dynamic coSoId) => '/yeu-thich/$coSoId';
   static String xoaYeuThich(dynamic coSoId) => '/yeu-thich/$coSoId';
   static String kiemTraYeuThich(dynamic coSoId) => '/yeu-thich/check/$coSoId';
+
+  // Thông báo
+  static const String danhSachThongBao = '/thong-bao';
+  static String docThongBao(dynamic id) => '/thong-bao/$id/doc';
 }
+
