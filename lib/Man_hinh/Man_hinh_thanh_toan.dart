@@ -10,6 +10,7 @@ import '../Xu_li/Xu_li_tai_khoan.dart';
 import '../Xu_li_api/Dat_san_api.dart';
 import '../Xu_li_api/Thanh_toan_api.dart';
 import 'Man_hinh_dang_nhap.dart';
+import 'Man_hinh_lich_dat_san.dart';
 import 'Man_hinh_vnpay_webview.dart';
 
 class ManHinhThanhToan extends StatefulWidget {
@@ -659,7 +660,88 @@ class _ManHinhThanhToanState extends State<ManHinhThanhToan> {
     return url;
   }
 
-  Future<void> moManHinhVnpay(String paymentUrl) async {
+  DatSan capNhatTienDatSanTuApi(
+    DatSan ds,
+    Map<String, dynamic> data,
+  ) {
+    final khuyenMaiRaw = data['khuyen_mai'];
+    int? khuyenMaiId = ds.khuyenMaiId;
+
+    if (khuyenMaiRaw is Map) {
+      final rawId = khuyenMaiRaw['id'] ?? khuyenMaiRaw['khuyen_mai_id'];
+      khuyenMaiId = _intTuJson(rawId);
+    }
+
+    return DatSan.fromJson({
+      ...ds.toJson(),
+      'id': ds.id,
+      'dat_san_id': ds.id,
+      'khuyen_mai_id': khuyenMaiId,
+      'tong_tien': _doubleTuJson(data['tong_tien'] ?? ds.tongTien),
+      'tien_giam': _doubleTuJson(data['tien_giam'] ?? ds.tienGiam),
+      'thanh_tien': _doubleTuJson(data['thanh_tien'] ?? ds.thanhTien),
+      'tien_coc': _doubleTuJson(data['tien_coc'] ?? ds.tienCoc),
+      'chi_tiet': ds.chiTiet.map((item) => item.toJson()).toList(),
+    });
+  }
+
+  Future<DatSan> capNhatMaGiamGiaTruocThanhToan(DatSan ds) async {
+    final maKhuyenMai = khuyenMaiDangChon?.ma.trim() ?? '';
+
+    if (maKhuyenMai.isEmpty) return ds;
+
+    final data = await api.patch(
+      '/dat-san/${ds.id}/khuyen-mai',
+      body: {
+        'ma_khuyen_mai': maKhuyenMai,
+      },
+    );
+
+    if (data is Map) {
+      final dsMoi = capNhatTienDatSanTuApi(
+        ds,
+        Map<String, dynamic>.from(data),
+      );
+
+      if (mounted) {
+        setState(() {
+          datSan = dsMoi;
+        });
+      }
+
+      return dsMoi;
+    }
+
+    return ds;
+  }
+
+  void moManHinhDatSanThanhCong(DatSan ds) {
+    final tenSanList = danhSachTenSan(ds);
+    final soTienDaThanhToan = loaiThanhToan == 'full'
+        ? thanhTienSauGiam(ds)
+        : tienCoc(ds);
+
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (_) => ManHinhDatSanThanhCong(
+          tenCoSo: widget.coSo?.tenCoSo ?? ds.tenCoSo,
+          ngayChoi: ngayChoi(ds),
+          khungGio: khungGioChoi(ds),
+          tenSan: tenSanList.isEmpty ? 'Sân đã chọn' : tenSanList.join(', '),
+          thoiLuong: dinhDangThoiLuong(thoiLuongGio(ds)),
+          maDatSan: 'DS${ds.id}',
+          maGiamGia: khuyenMaiDangChon?.ma ?? '',
+          tongTien: dinhDangTien(soTienDaThanhToan),
+        ),
+      ),
+      (route) => route.isFirst,
+    );
+  }
+
+  Future<void> moManHinhVnpay(
+    String paymentUrl,
+    DatSan dsDaCapNhatTien,
+  ) async {
     final ketQua = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
@@ -672,13 +754,7 @@ class _ManHinhThanhToanState extends State<ManHinhThanhToan> {
     if (!mounted) return;
 
     if (ketQua == true) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Thanh toán thành công'),
-        ),
-      );
-
-      Navigator.pop(context, true);
+      moManHinhDatSanThanhCong(dsDaCapNhatTien);
     } else if (ketQua == false) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -698,14 +774,19 @@ class _ManHinhThanhToanState extends State<ManHinhThanhToan> {
     });
 
     try {
+      final dsDaCapNhatTien = await capNhatMaGiamGiaTruocThanhToan(ds);
+
       final paymentUrl = await thanhToanApi.taoLinkThanhToanVnpay(
-        datSanId: ds.id,
+        datSanId: dsDaCapNhatTien.id,
         loaiThanhToan: loaiThanhToan,
       );
 
       if (!mounted) return;
 
-      await moManHinhVnpay(paymentUrl);
+      await moManHinhVnpay(
+        paymentUrl,
+        dsDaCapNhatTien,
+      );
     } catch (e) {
       if (!mounted) return;
 
@@ -1953,6 +2034,370 @@ class _ManHinhThanhToanState extends State<ManHinhThanhToan> {
         ),
       ),
       bottomNavigationBar: daDangNhap && ds != null ? thanhDuoi(ds) : null,
+    );
+  }
+}
+class ManHinhDatSanThanhCong extends StatelessWidget {
+  final String tenCoSo;
+  final String ngayChoi;
+  final String khungGio;
+  final String tenSan;
+  final String thoiLuong;
+  final String maDatSan;
+  final String maGiamGia;
+  final String tongTien;
+
+  const ManHinhDatSanThanhCong({
+    super.key,
+    required this.tenCoSo,
+    required this.ngayChoi,
+    required this.khungGio,
+    required this.tenSan,
+    required this.thoiLuong,
+    required this.maDatSan,
+    required this.maGiamGia,
+    required this.tongTien,
+  });
+
+  Widget dongThongTin({
+    required IconData icon,
+    required String label,
+    required String value,
+    Color? valueColor,
+    bool dam = false,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            color: Colors.grey.shade200,
+            width: 1,
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            size: 20,
+            color: const Color(0xff2454ff),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 13,
+                color: Colors.black87,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 13,
+                color: valueColor ?? Colors.black87,
+                fontWeight: dam ? FontWeight.w900 : FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void veTrangChu(BuildContext context) {
+    Navigator.of(context).popUntil((route) => route.isFirst);
+  }
+
+  void xemLichDaDat(BuildContext context) {
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (_) => const ManHinhLichDatSan(),
+      ),
+      (route) => route.isFirst,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xfff5f9ff),
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: Image.asset(
+              DuongDanAnh.Nen2,
+              fit: BoxFit.cover,
+            ),
+          ),
+          SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(26, 8, 26, 28),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      InkWell(
+                        onTap: () => veTrangChu(context),
+                        borderRadius: BorderRadius.circular(30),
+                        child: const SizedBox(
+                          width: 38,
+                          height: 38,
+                          child: Icon(
+                            Icons.arrow_back_ios_new_rounded,
+                            size: 20,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ),
+                      const Expanded(
+                        child: Text(
+                          'Đặt sân thành công',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 20,
+                            color: Colors.black,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 38),
+                    ],
+                  ),
+                  const SizedBox(height: 28),
+                  Container(
+                    width: 76,
+                    height: 76,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 18,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.check_rounded,
+                      color: Color(0xff22c55e),
+                      size: 46,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Đặt sân thành công!',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 24,
+                      color: Color(0xff2454ff),
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Bạn đã đặt sân thành công,\nchúc bạn có buổi chơi thật vui.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      height: 1.35,
+                      color: Colors.grey.shade700,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.fromLTRB(18, 16, 18, 12),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.98),
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.black12,
+                          blurRadius: 8,
+                          offset: Offset(1, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Thông tin đặt sân',
+                          style: TextStyle(
+                            fontSize: 15,
+                            color: Colors.black,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        dongThongTin(
+                          icon: Icons.home_work_outlined,
+                          label: 'Tên sân',
+                          value: tenCoSo,
+                        ),
+                        dongThongTin(
+                          icon: Icons.calendar_month_outlined,
+                          label: 'Ngày chơi',
+                          value: ngayChoi,
+                          valueColor: const Color(0xff2454ff),
+                          dam: true,
+                        ),
+                        dongThongTin(
+                          icon: Icons.access_time,
+                          label: 'Khung giờ',
+                          value: khungGio,
+                          valueColor: const Color(0xff2454ff),
+                          dam: true,
+                        ),
+                        dongThongTin(
+                          icon: Icons.stadium_outlined,
+                          label: 'Sân',
+                          value: tenSan,
+                          valueColor: const Color(0xff2454ff),
+                          dam: true,
+                        ),
+                        dongThongTin(
+                          icon: Icons.timer_outlined,
+                          label: 'Thời lượng',
+                          value: thoiLuong,
+                          valueColor: const Color(0xff2454ff),
+                          dam: true,
+                        ),
+                        dongThongTin(
+                          icon: Icons.confirmation_number_outlined,
+                          label: 'Mã đặt sân',
+                          value: maDatSan,
+                        ),
+                        dongThongTin(
+                          icon: Icons.account_balance_wallet_outlined,
+                          label: 'Thanh toán',
+                          value: 'Đã thanh toán',
+                          valueColor: const Color(0xff16a34a),
+                          dam: true,
+                        ),
+                        dongThongTin(
+                          icon: Icons.local_offer_outlined,
+                          label: 'Mã giảm giá',
+                          value: maGiamGia.isEmpty ? '-' : maGiamGia,
+                          valueColor: const Color(0xff2454ff),
+                          dam: maGiamGia.isNotEmpty,
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(top: 12, bottom: 2),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.payments_outlined,
+                                size: 20,
+                                color: Color(0xff2454ff),
+                              ),
+                              const SizedBox(width: 12),
+                              const Expanded(
+                                child: Text(
+                                  'Tổng tiền',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.black,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                              ),
+                              Text(
+                                tongTien,
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  color: Color(0xff2454ff),
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: () => xemLichDaDat(context),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xff2454ff),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(11),
+                        ),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.calendar_month_outlined, size: 21),
+                          SizedBox(width: 10),
+                          Text(
+                            'Xem lịch đã đặt',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          SizedBox(width: 10),
+                          Icon(Icons.chevron_right_rounded, size: 24),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 46,
+                    child: OutlinedButton(
+                      onPressed: () => veTrangChu(context),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xff2454ff),
+                        side: const BorderSide(
+                          color: Color(0xff2454ff),
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(11),
+                        ),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.home_outlined, size: 21),
+                          SizedBox(width: 10),
+                          Text(
+                            'Về trang chủ',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          SizedBox(width: 10),
+                          Icon(Icons.chevron_right_rounded, size: 24),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

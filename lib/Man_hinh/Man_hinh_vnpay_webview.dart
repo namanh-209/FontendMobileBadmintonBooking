@@ -218,13 +218,18 @@ class _ManHinhVnpayWebViewState extends State<ManHinhVnpayWebView> {
 
       if (!mounted) return;
 
+      if (ok) {
+        Navigator.pop(context, true);
+        return;
+      }
+
       setState(() {
         dangXacMinh = false;
         daCoKetQua = true;
-        thanhCong = ok;
+        thanhCong = false;
         duLieuKetQua = mapData;
         thongBao =
-            '${mapData['message'] ?? mapData['thong_bao'] ?? (ok ? 'Thanh toán thành công' : 'Thanh toán thất bại')}';
+            '${mapData['message'] ?? mapData['thong_bao'] ?? 'Thanh toán thất bại'}';
       });
     } catch (e) {
       if (!mounted) return;
@@ -234,11 +239,16 @@ class _ManHinhVnpayWebViewState extends State<ManHinhVnpayWebView> {
 
       final ok = responseCode == '00';
 
+      if (ok) {
+        Navigator.pop(context, true);
+        return;
+      }
+
       setState(() {
         dangXacMinh = false;
         daCoKetQua = true;
-        thanhCong = ok;
-        thongBao = ok ? 'Thanh toán thành công' : 'Thanh toán thất bại';
+        thanhCong = false;
+        thongBao = 'Thanh toán thất bại';
       });
     }
   }
