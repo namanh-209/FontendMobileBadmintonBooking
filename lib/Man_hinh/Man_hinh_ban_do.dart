@@ -11,6 +11,7 @@ import '../Mau_du_lieu/Co_so.dart';
 import '../Xu_li/Xu_li_co_so.dart';
 import '../Xu_li/Xu_li_yeu_thich.dart';
 import 'Man_hinh_chi_tiet_san.dart';
+import '../Dung_lai/Hieu_ung_tai.dart';
 
 class ManHinhBanDo extends StatefulWidget {
   const ManHinhBanDo({super.key});
@@ -1169,10 +1170,10 @@ class _ManHinhBanDoState extends State<ManHinhBanDo> {
           lopTimKiemVaLoc(xuLyCoSo.danhSachCoSo),
           chuThichOsm(),
           if (xuLyCoSo.dangTai)
-            const Center(
-              child: CircularProgressIndicator(
-                color: Color(0xff2454ff),
-              ),
+            const HieuUngTai(
+              text: 'Đang tải bản đồ...',
+              kichThuocLogo: 64,
+              kichThuocChu: 13,
             ),
           if (xuLyCoSo.thongBaoLoi != null && xuLyCoSo.danhSachCoSo.isEmpty)
             Center(

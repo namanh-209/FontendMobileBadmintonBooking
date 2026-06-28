@@ -11,6 +11,7 @@ import '../Xu_li/Xu_li_tai_khoan.dart';
 import '../Xu_li_api/Co_so_api.dart';
 import 'Man_hinh_dang_nhap.dart';
 import 'Man_hinh_thanh_toan.dart';
+import '../Dung_lai/Hieu_ung_tai.dart';
 
 class ManHinhChiTietSan extends StatefulWidget {
   final CoSo? coSo;
@@ -1246,8 +1247,8 @@ class _ManHinhChiTietSanState extends State<ManHinhChiTietSan> {
 
   Widget noiDungChiTiet() {
     if (dangTai) {
-      return const Center(
-        child: CircularProgressIndicator(),
+      return const HieuUngTai(
+        text: 'Đang tải chi tiết sân...',
       );
     }
 
@@ -1973,9 +1974,11 @@ class _ManHinhChiTietSanState extends State<ManHinhChiTietSan> {
             ),
           if (dangTaiLich)
             const Padding(
-              padding: EdgeInsets.only(top: 55),
-              child: Center(
-                child: CircularProgressIndicator(),
+              padding: EdgeInsets.only(top: 35),
+              child: HieuUngTai(
+                text: 'Đang tải lịch sân...',
+                kichThuocLogo: 58,
+                kichThuocChu: 12,
               ),
             )
           else if (danhSachKhungGio.isEmpty || danhSachSan.isEmpty)

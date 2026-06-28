@@ -8,6 +8,7 @@ import '../Mau_du_lieu/Co_so.dart';
 import '../Xu_li/Xu_li_co_so.dart';
 import '../Xu_li/Xu_li_yeu_thich.dart';
 import 'Man_hinh_chi_tiet_san.dart';
+import '../Dung_lai/Hieu_ung_tai.dart';
 
 class ManHinhTatCaSan extends StatefulWidget {
   final bool tuDongFocusTimKiem;
@@ -838,8 +839,8 @@ class _ManHinhTatCaSanState extends State<ManHinhTatCaSan> {
 
     if (xuLiCoSo.dangTai) {
       return const Expanded(
-        child: Center(
-          child: CircularProgressIndicator(),
+        child: HieuUngTai(
+          text: 'Đang tải danh sách sân...',
         ),
       );
     }

@@ -3,6 +3,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 
 import '../Chung/Duong_dan_api.dart';
 import '../Server/Goi_api.dart';
+import '../Dung_lai/Hieu_ung_tai.dart';
 
 class ManHinhVnpayWebView extends StatefulWidget {
   final String paymentUrl;
@@ -277,10 +278,14 @@ class _ManHinhVnpayWebViewState extends State<ManHinhVnpayWebView> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CircularProgressIndicator(),
+            HieuUngTai(
+              text: 'Đang xác minh thanh toán...',
+              kichThuocLogo: 64,
+              kichThuocChu: 13,
+            ),
             SizedBox(height: 18),
             Text(
-              'Đang xác minh thanh toán...',
+              'Vui lòng chờ...',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 16,

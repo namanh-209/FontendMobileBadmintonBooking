@@ -28,16 +28,24 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.4
+  flutter_native_splash: ^2.4.6
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/images/logo2.png"
+  adaptive_icon_background: "#F5F9FF"
+  adaptive_icon_foreground: "assets/images/logo2.png"
+
+flutter_native_splash:
+  color: "#F5F9FF"
+  image: assets/images/logo2.png
+  android: true
+  ios: false
 
 flutter:
   uses-material-design: true
 
   assets:
-    - assets/images/nen.png
-    - assets/images/nen2.png
-    - assets/images/logo.png
-    - assets/images/banner1.png
-    - assets/images/banner2.png
-    - assets/images/banner3.png
-    - assets/images/banner4.png
-    - assets/images/banner5.png
+    - assets/images/

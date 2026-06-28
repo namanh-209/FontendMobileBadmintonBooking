@@ -8,6 +8,7 @@ import 'Xu_li/Xu_li_san.dart';
 import 'Xu_li/Xu_li_tai_khoan.dart';
 import 'Xu_li/Xu_li_thanh_toan.dart';
 import 'Xu_li/Xu_li_yeu_thich.dart';
+import 'Dung_lai/Hieu_ung_tai.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -109,10 +110,8 @@ class _ManHinhKhoiDongState extends State<ManHinhKhoiDong> {
                 ),
               ],
             ),
-            child: const Center(
-              child: CircularProgressIndicator(
-                color: Color(0xff2454ff),
-              ),
+            child: const HieuUngTai(
+              text: 'Đang khởi động...',
             ),
           ),
         ),

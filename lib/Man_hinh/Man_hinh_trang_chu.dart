@@ -17,6 +17,7 @@ import '../Xu_li/Xu_li_yeu_thich.dart';
 import 'Man_hinh_chi_tiet_san.dart';
 import 'Man_hinh_dang_nhap.dart';
 import 'Man_hinh_tat_ca_san.dart';
+import '../Dung_lai/Hieu_ung_tai.dart';
 
 class ManHinhTrangChu extends StatefulWidget {
   const ManHinhTrangChu({
@@ -2991,9 +2992,9 @@ class _ManHinhTrangChuState extends State<ManHinhTrangChu> {
   Widget noiDungDanhSachCoSo(XuLiCoSo xuLiCoSo) {
     if (xuLiCoSo.dangTai) {
       return const Padding(
-        padding: EdgeInsets.only(top: 50),
-        child: Center(
-          child: CircularProgressIndicator(),
+        padding: EdgeInsets.only(top: 40),
+        child: HieuUngTai(
+          text: 'Đang tải sân...',
         ),
       );
     }

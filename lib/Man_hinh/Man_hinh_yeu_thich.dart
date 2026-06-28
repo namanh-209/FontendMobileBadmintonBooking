@@ -9,6 +9,7 @@ import '../Mau_du_lieu/Co_so.dart';
 import '../Xu_li/Xu_li_co_so.dart';
 import '../Xu_li/Xu_li_yeu_thich.dart';
 import 'Man_hinh_chi_tiet_san.dart';
+import '../Dung_lai/Hieu_ung_tai.dart';
 
 class ManHinhYeuThich extends StatefulWidget {
   const ManHinhYeuThich({
@@ -436,10 +437,8 @@ class _ManHinhYeuThichState extends State<ManHinhYeuThich> {
                 const SizedBox(height: 12),
                 Expanded(
                   child: xuLiCoSo.dangTai
-                      ? const Center(
-                          child: CircularProgressIndicator(
-                            color: Color(0xff2454ff),
-                          ),
+                      ? const HieuUngTai(
+                          text: 'Đang tải yêu thích...',
                         )
                       : danhSachYeuThich.isEmpty
                           ? manHinhTrong()

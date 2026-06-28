@@ -12,6 +12,7 @@ import '../Xu_li_api/Thanh_toan_api.dart';
 import 'Man_hinh_dang_nhap.dart';
 import 'Man_hinh_lich_dat_san.dart';
 import 'Man_hinh_vnpay_webview.dart';
+import '../Dung_lai/Hieu_ung_tai.dart';
 
 class ManHinhThanhToan extends StatefulWidget {
   final DatSan? datSan;
@@ -1001,8 +1002,10 @@ class _ManHinhThanhToanState extends State<ManHinhThanhToan> {
                       ),
                       Expanded(
                         child: dangTaiKhuyenMai
-                            ? const Center(
-                                child: CircularProgressIndicator(),
+                            ? const HieuUngTai(
+                                text: 'Đang tải voucher...',
+                                kichThuocLogo: 58,
+                                kichThuocChu: 12,
                               )
                             : danhSachKhuyenMai.isEmpty
                                 ? const Center(
@@ -2021,8 +2024,8 @@ class _ManHinhThanhToanState extends State<ManHinhThanhToan> {
                       ),
                     )
                   : dangTai
-                      ? const Center(
-                          child: CircularProgressIndicator(),
+                      ? const HieuUngTai(
+                          text: 'Đang tải thanh toán...',
                         )
                       : loi != null
                           ? noiDungLoi(loi!)

@@ -9,6 +9,7 @@ import '../Server/Goi_api.dart';
 import '../Xu_li/Xu_li_tai_khoan.dart';
 import '../Xu_li_api/Dat_san_api.dart';
 import 'Man_hinh_dang_nhap.dart';
+import '../Dung_lai/Hieu_ung_tai.dart';
 
 class ManHinhLichSuDatSan extends StatefulWidget {
   const ManHinhLichSuDatSan({super.key});
@@ -722,8 +723,8 @@ class _ManHinhLichSuDatSanState extends State<ManHinhLichSuDatSan> {
     if (!daDangNhap) return manHinhChuaDangNhap();
 
     if (dangTai) {
-      return const Center(
-        child: CircularProgressIndicator(),
+      return const HieuUngTai(
+        text: 'Đang tải lịch sử đặt sân...',
       );
     }
 
