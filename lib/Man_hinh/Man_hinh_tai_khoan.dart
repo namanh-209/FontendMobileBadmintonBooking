@@ -14,6 +14,7 @@ import 'Man_hinh_dat_lai_mk.dart';
 import 'Man_hinh_lich_dat_san.dart';
 import 'Man_hinh_lich_su_dat_san.dart';
 import 'Man_hinh_cai_dat.dart';
+import 'Man_hinh_tro_giup.dart';
 
 class ManHinhTaiKhoan extends StatelessWidget {
   const ManHinhTaiKhoan({super.key});
@@ -86,6 +87,15 @@ void chuyenDoiMatKhau(BuildContext context) {
       context,
       MaterialPageRoute(
         builder: (_) => const ManHinhCaiDat(),
+      ),
+    );
+  }
+
+  void chuyenTroGiup(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const ManHinhTroGiup(),
       ),
     );
   }
@@ -669,6 +679,9 @@ void chuyenDoiMatKhau(BuildContext context) {
                 icon: Icons.help_outline_rounded,
                 tieuDe: 'Trợ giúp',
                 coMuiTen: true,
+                onTap: () {
+                  chuyenTroGiup(context);
+                },
               ),
               gachNgang(),
              dongThongTin(
@@ -886,6 +899,9 @@ void chuyenDoiMatKhau(BuildContext context) {
                 icon: Icons.help_outline_rounded,
                 tieuDe: 'Trợ giúp',
                 coMuiTen: true,
+                onTap: () {
+                  chuyenTroGiup(context);
+                },
               ),
               gachNgang(),
               dongThongTin(
