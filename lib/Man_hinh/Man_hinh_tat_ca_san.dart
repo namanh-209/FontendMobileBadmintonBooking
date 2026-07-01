@@ -98,10 +98,6 @@ class _ManHinhTatCaSanState extends State<ManHinhTatCaSan> {
     final viDoCoSo = coSo.viDo;
     final kinhDoCoSo = coSo.kinhDo;
 
-    if (kinhDoCoSo == null) {
-      return null;
-    }
-
     if (viDoCoSo == 0 || kinhDoCoSo == 0) {
       return null;
     }

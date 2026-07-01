@@ -1,4 +1,3 @@
-import 'package:do_an/Man_hinh/Man_hinh_lich_dat_san.dart';
 import 'package:flutter/material.dart';
 
 import '../Mau_du_lieu/Thong_bao.dart';
@@ -9,7 +8,6 @@ import '../Mau_du_lieu/Co_so.dart';
 
 import 'Man_hinh_lich_su_dat_san.dart';
 import 'Man_hinh_chi_tiet_san.dart';
-import 'Man_hinh_yeu_thich.dart';
 import 'Man_hinh_tai_khoan.dart';
 import 'Man_hinh_trang_chu.dart';
 

@@ -95,4 +95,37 @@ class DanhGiaApi {
       throw Exception('Lỗi ${response.statusCode}: ${response.body}');
     }
   }
+  static Future<void> guiDanhGiaSauDatSan({
+    required int datSanId,
+    required int coSoId,
+    required int soSao,
+    required String noiDung,
+  }) async {
+    final token = await _layToken();
+
+    if (token.isEmpty) {
+      throw Exception('Bạn cần đăng nhập để đánh giá');
+    }
+
+    final url = Uri.parse(
+      DuongDanApi.noiApi('/danh-gia'),
+    );
+
+    final response = await http
+        .post(
+          url,
+          headers: _headers(token),
+          body: jsonEncode({
+            'dat_san_id': datSanId,
+            'co_so_id': coSoId,
+            'so_sao': soSao,
+            'noi_dung': noiDung,
+          }),
+        )
+        .timeout(const Duration(seconds: 10));
+
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw Exception('Lỗi ${response.statusCode}: ${response.body}');
+    }
+  }
 }

@@ -33,7 +33,7 @@ class DuongDanApi {
   static String _xoaDauNgoacNeuCo(String value) {
     var text = value.trim();
 
-    while ((text.startsWith('\"') && text.endsWith('\"')) ||
+    while ((text.startsWith('"') && text.endsWith('"')) ||
         (text.startsWith("'") && text.endsWith("'"))) {
       text = text.substring(1, text.length - 1).trim();
     }

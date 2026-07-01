@@ -49,9 +49,9 @@ class ManHinhTaiKhoan extends StatelessWidget {
 void chuyenDoiMatKhau(BuildContext context) {
   final nguoiDung = context.read<XuLiTaiKhoan>().nguoiDung;
 
-  final taiKhoan = '${nguoiDung?.email ?? ''}'.trim().isNotEmpty
+  final taiKhoan = (nguoiDung?.email ?? '').trim().isNotEmpty
       ? '${nguoiDung?.email}'
-      : '${nguoiDung?.soDienThoai ?? ''}';
+      : nguoiDung?.soDienThoai ?? '';
 
   Navigator.push(
     context,

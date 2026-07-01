@@ -6,11 +6,13 @@ import '../Xu_li_api/Danh_gia_api.dart';
 class ManHinhDanhGiaSan extends StatefulWidget {
   final int coSoId;
   final String tenCoSo;
+  final int? datSanId;
 
   const ManHinhDanhGiaSan({
     super.key,
     required this.coSoId,
     required this.tenCoSo,
+    this.datSanId,
   });
 
   @override
@@ -23,6 +25,8 @@ class _ManHinhDanhGiaSanState extends State<ManHinhDanhGiaSan> {
   int soSao = 5;
   bool dangGui = false;
   late Future<List<DanhGia>> futureDanhGia;
+
+  bool get duocPhepDanhGia => widget.datSanId != null && widget.datSanId! > 0;
 
   @override
   void initState() {
@@ -45,6 +49,15 @@ class _ManHinhDanhGiaSanState extends State<ManHinhDanhGiaSan> {
   Future<void> guiDanhGia() async {
     final noiDung = noiDungController.text.trim();
 
+    if (!duocPhepDanhGia) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Bạn chỉ có thể đánh giá sau khi đã đặt sân'),
+        ),
+      );
+      return;
+    }
+
     if (noiDung.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Vui lòng nhập nội dung đánh giá')),
@@ -57,14 +70,19 @@ class _ManHinhDanhGiaSanState extends State<ManHinhDanhGiaSan> {
         dangGui = true;
       });
 
-      await DanhGiaApi.guiDanhGia(
+      await DanhGiaApi.guiDanhGiaSauDatSan(
+        datSanId: widget.datSanId!,
         coSoId: widget.coSoId,
         soSao: soSao,
         noiDung: noiDung,
       );
 
       noiDungController.clear();
-      soSao = 5;
+
+      setState(() {
+        soSao = 5;
+      });
+
       taiLaiDanhGia();
 
       if (!mounted) return;
@@ -72,11 +90,13 @@ class _ManHinhDanhGiaSanState extends State<ManHinhDanhGiaSan> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Gửi đánh giá thành công')),
       );
+
+      Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
+        SnackBar(content: Text('$e')),
       );
     } finally {
       if (mounted) {
@@ -93,11 +113,13 @@ class _ManHinhDanhGiaSanState extends State<ManHinhDanhGiaSan> {
         final sao = index + 1;
 
         return IconButton(
-          onPressed: () {
-            setState(() {
-              soSao = sao;
-            });
-          },
+          onPressed: dangGui
+              ? null
+              : () {
+                  setState(() {
+                    soSao = sao;
+                  });
+                },
           icon: Icon(
             sao <= soSao ? Icons.star_rounded : Icons.star_border_rounded,
             color: Colors.amber,
@@ -105,6 +127,98 @@ class _ManHinhDanhGiaSanState extends State<ManHinhDanhGiaSan> {
           ),
         );
       }),
+    );
+  }
+
+  Widget buildFormDanhGia() {
+    if (!duocPhepDanhGia) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xfffff7ed),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: const Text(
+          'Bạn chỉ có thể viết đánh giá sau khi đã đặt sân.',
+          style: TextStyle(
+            color: Colors.orange,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 8,
+            offset: Offset(1, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Đánh giá cho mã đặt sân #${widget.datSanId}',
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
+          ),
+          const SizedBox(height: 8),
+          buildChonSao(),
+          const SizedBox(height: 10),
+          TextField(
+            controller: noiDungController,
+            maxLines: 4,
+            enabled: !dangGui,
+            decoration: InputDecoration(
+              hintText: 'Nhập nội dung đánh giá...',
+              filled: true,
+              fillColor: const Color(0xfff8fafc),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            height: 46,
+            child: ElevatedButton(
+              onPressed: dangGui ? null : guiDanhGia,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xff2454ff),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              child: dangGui
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : const Text(
+                      'Gửi đánh giá',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -223,88 +337,9 @@ class _ManHinhDanhGiaSanState extends State<ManHinhDanhGiaSan> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-
             const SizedBox(height: 18),
-
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(18),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Colors.black12,
-                    blurRadius: 8,
-                    offset: Offset(1, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Bạn đánh giá sân này thế nào?',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  buildChonSao(),
-
-                  const SizedBox(height: 10),
-
-                  TextField(
-                    controller: noiDungController,
-                    maxLines: 4,
-                    decoration: InputDecoration(
-                      hintText: 'Nhập nội dung đánh giá...',
-                      filled: true,
-                      fillColor: const Color(0xfff8fafc),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 14),
-
-                  SizedBox(
-                    width: double.infinity,
-                    height: 46,
-                    child: ElevatedButton(
-                      onPressed: dangGui ? null : guiDanhGia,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xff2454ff),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                      ),
-                      child: dangGui
-                          ? const SizedBox(
-                              width: 22,
-                              height: 22,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
-                            )
-                          : const Text(
-                              'Gửi đánh giá',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
+            buildFormDanhGia(),
             const SizedBox(height: 22),
-
             const Text(
               'Danh sách đánh giá',
               style: TextStyle(
@@ -312,9 +347,7 @@ class _ManHinhDanhGiaSanState extends State<ManHinhDanhGiaSan> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-
             const SizedBox(height: 12),
-
             buildDanhSachDanhGia(),
           ],
         ),
