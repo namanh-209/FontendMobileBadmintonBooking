@@ -207,6 +207,8 @@ class DuongDanApi {
 
   // Thông báo
   static const String danhSachThongBao = '/thong-bao';
-  static String docThongBao(dynamic id) => '/thong-bao/$id/doc';
+  static const String soThongBaoChuaDoc = '/thong-bao/chua-doc';
+  static const String docTatCaThongBao = '/thong-bao/doc-tat-ca';
+  static String docThongBao(dynamic id) => '/thong-bao/$id/da-doc';
 }
 

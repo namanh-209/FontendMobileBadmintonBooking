@@ -27,15 +27,22 @@ class _ManHinhThongBaoState extends State<ManHinhThongBao> {
     });
   }
 
-  IconData iconTheoLoai(String? loai) {
-    switch (loai) {
-      case 'dat_san':
+  IconData iconTheoLoai(String? loai)
+  {
+    switch (loai?.toUpperCase()) {
+      case 'DAT_SAN':
         return Icons.sports_tennis_rounded;
-      case 'thanh_toan':
+      case 'THANH_TOAN':
         return Icons.payments_rounded;
-      case 'huy_lich':
+      case 'CO_SO':
+        return Icons.store_rounded;
+      case 'DANH_GIA':
+        return Icons.star_rounded;
+      case 'KHIEU_NAI':
+        return Icons.report_problem_rounded;
+      case 'HUY_LICH':
         return Icons.cancel_schedule_send_rounded;
-      case 'khuyen_mai':
+      case 'KHUYEN_MAI':
         return Icons.local_offer_rounded;
       default:
         return Icons.notifications_rounded;

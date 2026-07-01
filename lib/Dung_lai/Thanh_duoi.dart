@@ -5,6 +5,7 @@ import '../Man_hinh/Man_hinh_ban_do.dart';
 import '../Man_hinh/Man_hinh_tai_khoan.dart';
 import '../Man_hinh/Man_hinh_yeu_thich.dart';
 import '../Man_hinh/Man_hinh_thong_bao.dart';
+import '../Xu_li_api/Thong_bao_api.dart';
 import 'Hieu_ung_chuyen_trang.dart';
 
 class ThanhDuoi extends StatelessWidget {
@@ -67,21 +68,53 @@ class ThanhDuoi extends StatelessWidget {
                     : Colors.transparent,
                 borderRadius: BorderRadius.circular(18),
               ),
-              child: Icon(
-                icon,
-                color: dangChon ? const Color(0xff2454ff) : Colors.grey,
-                size: dangChon ? 23 : 22,
-              ),
-            ),
-            const SizedBox(height: 3),
-            Text(
-              text,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: dangChon ? const Color(0xff2454ff) : Colors.grey,
-                fontSize: 9.6,
-                fontWeight: dangChon ? FontWeight.bold : FontWeight.w500,
+              child: Stack(
+                clipBehavior: Clip.none,
+                alignment: Alignment.center,
+                children: [
+                  Icon(
+                    icon,
+                    color: dangChon ? const Color(0xff2454ff) : Colors.grey,
+                    size: dangChon ? 23 : 22,
+                  ),
+
+                  if (viTri == 3)
+                    Positioned(
+                      right: 4,
+                      top: 2,
+                      child: FutureBuilder<int>(
+                        future: ThongBaoApi.demThongBaoChuaDoc(),
+                        builder: (context, snapshot) {
+                          final soChuaDoc = snapshot.data ?? 0;
+
+                          if (soChuaDoc <= 0) {
+                            return const SizedBox.shrink();
+                          }
+
+                          return Container(
+                            constraints: const BoxConstraints(
+                              minWidth: 15,
+                              minHeight: 15,
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            decoration: const BoxDecoration(
+                              color: Color(0xffff3b30),
+                              shape: BoxShape.circle,
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              soChuaDoc > 9 ? '9+' : '$soChuaDoc',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 8,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                ],
               ),
             ),
           ],
