@@ -210,5 +210,9 @@ class DuongDanApi {
   static const String soThongBaoChuaDoc = '/thong-bao/chua-doc';
   static const String docTatCaThongBao = '/thong-bao/doc-tat-ca';
   static String docThongBao(dynamic id) => '/thong-bao/$id/da-doc';
+
+  //Đánh giá
+  static String danhSachDanhGia(int coSoId) => '/danh-gia/co-so/$coSoId';
+  static const String themDanhGia = '/danh-gia';
 }
 

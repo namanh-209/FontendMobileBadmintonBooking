@@ -11,7 +11,9 @@ import '../Xu_li/Xu_li_tai_khoan.dart';
 import '../Xu_li_api/Co_so_api.dart';
 import 'Man_hinh_dang_nhap.dart';
 import 'Man_hinh_thanh_toan.dart';
+import 'Man_hinh_danh_gia.dart';
 import '../Dung_lai/Hieu_ung_tai.dart';
+
 
 class ManHinhChiTietSan extends StatefulWidget {
   final CoSo? coSo;
@@ -1073,75 +1075,6 @@ class _ManHinhChiTietSanState extends State<ManHinhChiTietSan> {
   }
 
   Widget theDanhGia() {
-    Widget sao() {
-      return const Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.star, color: Color(0xff2454ff), size: 14),
-          Icon(Icons.star, color: Color(0xff2454ff), size: 14),
-          Icon(Icons.star, color: Color(0xff2454ff), size: 14),
-          Icon(Icons.star, color: Color(0xff2454ff), size: 14),
-          Icon(Icons.star, color: Color(0xff2454ff), size: 14),
-        ],
-      );
-    }
-
-    Widget dongDanhGia(String ten, String noiDung, String ngay) {
-      return Padding(
-        padding: const EdgeInsets.only(top: 9),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            CircleAvatar(
-              radius: 13,
-              backgroundColor: Colors.blue.shade50,
-              child: Text(
-                ten[0],
-                style: const TextStyle(
-                  color: Color(0xff2454ff),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 11,
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    ten,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  sao(),
-                  const SizedBox(height: 2),
-                  Text(
-                    noiDung,
-                    softWrap: true,
-                    style: const TextStyle(
-                      fontSize: 10,
-                      color: Colors.black87,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 6),
-            Text(
-              ngay,
-              style: TextStyle(
-                fontSize: 9,
-                color: Colors.grey.shade600,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(13),
@@ -1159,89 +1092,162 @@ class _ManHinhChiTietSanState extends State<ManHinhChiTietSan> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+
           const Text(
             'Đánh giá',
             style: TextStyle(
-              fontSize: 12.5,
-              color: Colors.black,
-              fontWeight: FontWeight.w800,
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 8),
+
+          const SizedBox(height: 10),
+
           Row(
             children: [
-              const SizedBox(
-                width: 88,
-                child: Column(
-                  children: [
-                    Text(
-                      '4,9',
-                      style: TextStyle(
-                        fontSize: 25,
-                        color: Colors.black,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    Text(
-                      '297 lượt đánh giá',
-                      style: TextStyle(
-                        fontSize: 9,
-                        color: Colors.black54,
-                      ),
-                    ),
-                  ],
+
+              const Icon(
+                Icons.star,
+                color: Colors.amber,
+                size: 28,
+              ),
+
+              const SizedBox(width: 6),
+
+              const Text(
+                "4.9",
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-              Expanded(
-                child: Column(
-                  children: List.generate(5, (index) {
-                    final value = [0.9, 0.35, 0.12, 0.05, 0.02][index];
 
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 2),
-                      child: Row(
-                        children: [
-                          Text(
-                            '${5 - index}',
-                            style: const TextStyle(
-                              fontSize: 9,
-                              color: Colors.black54,
-                            ),
-                          ),
-                          const Icon(
-                            Icons.star,
-                            color: Color(0xff2454ff),
-                            size: 9,
-                          ),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: LinearProgressIndicator(
-                              value: value,
-                              minHeight: 3,
-                              backgroundColor: Colors.grey.shade200,
-                              color: const Color(0xff2454ff),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }),
+              const SizedBox(width: 10),
+
+              Text(
+                "297 đánh giá",
+                style: TextStyle(
+                  color: Colors.grey.shade700,
                 ),
               ),
             ],
           ),
-          dongDanhGia(
-            'Minh Anh',
-            'Sân đẹp, sạch sẽ, nhân viên thân thiện.',
-            '2 ngày trước',
+
+          const SizedBox(height: 18),
+
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              icon: const Icon(Icons.rate_review),
+              label: const Text("Xem và viết đánh giá"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xff2454ff),
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () {
+
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ManHinhDanhGiaSan(
+                      coSoId: coSo.id,
+                      tenCoSo: coSo.tenCoSo,
+                    ),
+                  ),
+                );
+
+              },
+            ),
           ),
-          dongDanhGia(
-            'Khanh',
-            'Đặt sân dễ dàng, giá hợp lý.',
-            '3 ngày trước',
+
+          const SizedBox(height: 18),
+
+          const Divider(),
+
+          const SizedBox(height: 10),
+
+          _itemDanhGia(
+            "Minh Anh",
+            5,
+            "Sân đẹp, sạch sẽ, nhân viên nhiệt tình.",
+            "2 ngày trước",
           ),
+
+          const SizedBox(height: 12),
+
+          _itemDanhGia(
+            "Khánh",
+            4,
+            "Đặt sân rất nhanh.",
+            "3 ngày trước",
+          ),
+
         ],
       ),
+    );
+  }
+
+  Widget _itemDanhGia(
+    String ten,
+    int soSao,
+    String noiDung,
+    String ngay,
+  ) {
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+
+        CircleAvatar(
+          radius: 18,
+          child: Text(ten[0]),
+        ),
+
+        const SizedBox(width: 10),
+
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+
+              Text(
+                ten,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+
+              Row(
+                children: List.generate(
+                  5,
+                  (index) => Icon(
+                    index < soSao
+                        ? Icons.star
+                        : Icons.star_border,
+                    color: Colors.amber,
+                    size: 18,
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 4),
+
+              Text(noiDung),
+
+              const SizedBox(height: 3),
+
+              Text(
+                ngay,
+                style: TextStyle(
+                  color: Colors.grey.shade600,
+                  fontSize: 12,
+                ),
+              ),
+
+            ],
+          ),
+        ),
+      ],
     );
   }
 
